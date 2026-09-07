@@ -1,0 +1,31 @@
+{
+  "name": "08-hedged-non-commitment",
+  "complexity": "complex",
+  "notes": "Hedged language that is NOT a commitment. Over-extraction trap.",
+  "segments": [
+    {
+      "speaker": "Chair",
+      "start_ms": 0,
+      "end_ms": 8000,
+      "text": "Could someone look at the website before the open day?"
+    },
+    {
+      "speaker": "Tom",
+      "start_ms": 8000,
+      "end_ms": 16000,
+      "text": "I might be able to, but I've got exams that fortnight, so don't count on me."
+    },
+    {
+      "speaker": "Chair",
+      "start_ms": 16000,
+      "end_ms": 24000,
+      "text": "Understood, let's leave it unassigned for now."
+    }
+  ],
+  "expected": {
+    "decisions": [],
+    "action_items": [],
+    "risks": [],
+    "commitments": []
+  }
+}

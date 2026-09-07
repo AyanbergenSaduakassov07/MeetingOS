@@ -1,0 +1,14 @@
+{
+  "name": "03-reversal-of-a-deferral",
+  "kind": "genuine",
+  "expected": "reversed",
+  "notes": "A decision to defer, then overturned by a decision to proceed now.",
+  "prior": {
+    "meeting": "March board",
+    "claim": "Defer the membership cap decision until Dana is present"
+  },
+  "new": {
+    "meeting": "April board",
+    "claim": "We are settling the membership cap today at thirty without waiting for Dana"
+  }
+}

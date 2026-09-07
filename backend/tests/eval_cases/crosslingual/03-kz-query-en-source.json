@@ -1,0 +1,9 @@
+{
+  "name": "03-kz-query-en-source",
+  "query_language": "kk",
+  "source_language": "en",
+  "query": "Ақтау портын кеңейту туралы шешім қандай?",
+  "should_retrieve": "The board approved the Aktau port expansion capital budget",
+  "should_not_retrieve": "The board increased the staff canteen budget",
+  "notes": "Kazakh is far less represented in embedding training data than Russian. Expect this to be the weakest of the three; a model that passes RU/EN and fails KZ is still a finding worth having."
+}

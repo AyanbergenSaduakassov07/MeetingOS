@@ -1,13 +1,13 @@
 {
   "name": "voicebox",
-  "version": "0.5.0",
+  "version": "0.1.0",
   "private": true,
   "workspaces": [
     "web"
   ],
   "scripts": {
     "dev:web": "cd web && bun run dev",
-    "dev:server": "uvicorn backend.main:app --reload --port 17493",
+    "dev:server": "backend/venv/bin/python -m uvicorn backend.main:app --reload --port 17493",
     "setup:dev": "bun run scripts/setup-dev-sidecar.js",
     "build:web": "cd web && bun run build",
     "build:release": "./scripts/prepare-release.sh",
@@ -15,12 +15,12 @@
     "build:server": "./scripts/build-server.sh",
     "update:icons": "./scripts/update-icons.sh",
     "convert:assets": "./scripts/convert-assets.sh",
-    "lint": "biome lint .",
+    "lint": "biome lint web/src",
     "typecheck": "cd web && bunx tsc --noEmit",
     "lint:fix": "biome lint --write .",
-    "format": "biome format --write .",
+    "format": "biome format --write web/src backend/tests/eval_cases",
     "format:check": "biome format .",
-    "check": "biome check .",
+    "check": "biome check web/src backend/tests/eval_cases",
     "check:fix": "biome check --write .",
     "ci": "bun run typecheck && bun run build:web"
   },

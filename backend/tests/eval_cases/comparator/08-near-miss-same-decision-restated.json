@@ -1,0 +1,14 @@
+{
+  "name": "08-near-miss-same-decision-restated",
+  "kind": "near_miss",
+  "expected": "consistent",
+  "notes": "The same decision minuted twice in different words. Not a conflict, not a refinement.",
+  "prior": {
+    "meeting": "January board",
+    "claim": "Approve the Aktau expansion phase two capex of 500,000"
+  },
+  "new": {
+    "meeting": "March board",
+    "claim": "The board confirmed the 500,000 capex for Aktau phase two"
+  }
+}

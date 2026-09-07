@@ -1,0 +1,158 @@
+{
+  "common": {
+    "cancel": "Cancel",
+    "save": "Save",
+    "delete": "Delete",
+    "edit": "Edit",
+    "close": "Close",
+    "confirm": "Confirm",
+    "retry": "Retry",
+    "loading": "Loading…",
+    "error": "Error",
+    "unknown": "Unknown",
+    "unknownError": "Something went wrong"
+  },
+  "nav": {
+    "brand": "MeetingOS",
+    "meetings": "Meetings",
+    "upload": "Upload",
+    "settings": "Settings",
+    "language": "Language",
+    "languageSwitch": "Switch interface language",
+    "theme": "Theme",
+    "themeLight": "Light",
+    "themeDark": "Dark",
+    "skipToContent": "Skip to main content",
+    "primary": "Primary",
+    "current": "(current)",
+    "copilot": "Copilot",
+    "library": "Library",
+    "dashboard": "Dashboard"
+  },
+  "tabs": {
+    "summary": "Summary",
+    "decisions": "Decisions",
+    "actions": "Actions",
+    "risks": "Risks",
+    "transcript": "Transcript"
+  },
+  "status": {
+    "verified": "Verified",
+    "lowConfidence": "Low confidence",
+    "unsupported": "Unsupported",
+    "unverified": "Not yet verified",
+    "processing": "Processing",
+    "completed": "Completed",
+    "failed": "Failed",
+    "queued": "Queued",
+    "confidence": "Confidence {{value}}",
+    "verifiedHint": "The cited transcript segment supports this claim.",
+    "lowConfidenceHint": "The cited segment may not support this claim. Check the transcript.",
+    "unsupportedHint": "No valid transcript citation. Treat as unverified.",
+    "unverifiedHint": "This item has not been verified against the transcript yet.",
+    "verificationScore": "Verified {{value}}",
+    "verificationScoreHint": "How well the cited transcript supports this claim, scored by the verifier.",
+    "revisited": "Revisited"
+  },
+  "severity": {
+    "low": "Low",
+    "medium": "Medium",
+    "high": "High",
+    "critical": "Critical"
+  },
+  "priority": {
+    "low": "Low",
+    "medium": "Medium",
+    "high": "High",
+    "urgent": "Urgent"
+  },
+  "copilot": {
+    "title": "Copilot",
+    "placeholder": "Ask about this meeting…",
+    "send": "Send",
+    "empty": "Ask a question about this meeting. Answers cite the transcript.",
+    "thinking": "Thinking…",
+    "error": "Copilot could not answer. Try again.",
+    "offline": "Copilot is unavailable right now.",
+    "notDiscussed": "That was not discussed in this meeting — at least not in the parts of the transcript most related to your question.",
+    "unsupported": "No transcript citation — do not rely on this.",
+    "citations": "From the transcript"
+  },
+  "meetings": {
+    "title": "Meetings",
+    "empty": "No meetings yet.",
+    "emptyHint": "Upload a recording to get started.",
+    "searchPlaceholder": "Search meetings…",
+    "duration": "Duration",
+    "recorded": "Recorded",
+    "segments": "Segments",
+    "speakers": "Speakers",
+    "uploading": "Uploading…",
+    "loadFailed": "Could not load this meeting.",
+    "processingTitle": "Still processing",
+    "processingDetail": "Transcription and extraction are running. This page updates on its own.",
+    "failedTitle": "Processing failed",
+    "failedDetail": "This recording could not be processed."
+  },
+  "intelligence": {
+    "decisions": "Decisions",
+    "actions": "Action items",
+    "risks": "Risks",
+    "commitments": "Commitments",
+    "topics": "Topics",
+    "empty": "Nothing extracted for this section.",
+    "source": "Cited transcript",
+    "noSource": "No citation",
+    "assignee": "Assignee",
+    "unassigned": "Unassigned",
+    "due": "Due",
+    "kindDecision": "Decision",
+    "kindAction": "Action",
+    "kindRisk": "Risk",
+    "kindCommitment": "Commitment"
+  },
+  "a11y": {
+    "loading": "Loading content",
+    "sortAscending": "Sorted ascending",
+    "sortDescending": "Sorted descending"
+  },
+  "player": {
+    "play": "Play",
+    "pause": "Pause",
+    "loading": "Loading audio…",
+    "unavailable": "Audio is unavailable for this meeting.",
+    "seekTo": "Jump to {{time}}"
+  },
+  "dashboard": {
+    "title": "Command centre",
+    "period": "Last {{days}} days · {{meetings}} meetings",
+    "decisionsHeading": "Decisions and obligations",
+    "topRisks": "Top open risks",
+    "noRisks": "No open risks in this period.",
+    "mostActive": "Most active people",
+    "noActivity": "No recorded activity in this period.",
+    "meetingsShort": "mtg",
+    "decisionsShort": "dec",
+    "commitmentsShort": "com",
+    "loadFailed": "Could not load the dashboard."
+  },
+  "quality": {
+    "title": "Extraction quality",
+    "reviewAll": "Review all",
+    "verifiedOf": "verified of {{total}} claims",
+    "nothingExtracted": "Nothing extracted yet.",
+    "unverifiedNotice": "Some claims have not been checked against the transcript. Treat 'not yet verified' as unknown, not as fine.",
+    "needsReview": "{{count}} claim(s) need a human look."
+  },
+  "commitments": {
+    "title": "Commitments",
+    "overdueTitle": "Overdue commitments",
+    "backToDashboard": "Back to dashboard",
+    "count": "{{count}} item(s)",
+    "empty": "Nothing matches these filters.",
+    "loadFailed": "Could not load commitments.",
+    "overdueBy": "{{days}} days overdue",
+    "kind_commitment": "Promise",
+    "kind_action_item": "Task"
+  }
+}

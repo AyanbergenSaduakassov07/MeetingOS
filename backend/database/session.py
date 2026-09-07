@@ -1,23 +1,13 @@
 """Engine creation, initialization, and session management."""
 
 import logging
-import uuid
 
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker
 
 from .. import config
-from .models import (
-    Base,
-    AudioChannel,
-    EffectPreset,
-    Generation,
-    GenerationVersion,
-    ProfileChannelMapping,
-    VoiceProfile,
-)
 from .migrations import run_migrations
-from .seed import backfill_generation_versions, seed_builtin_presets
+from .models import Base
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +18,7 @@ _db_path = None
 
 
 def init_db() -> None:
-    """Initialize the database engine, run migrations, create tables, and seed data."""
+    """Initialize the database engine, run migrations, and create tables."""
     global engine, SessionLocal, _db_path
 
     _db_path = config.get_db_path()
@@ -39,39 +29,39 @@ def init_db() -> None:
         connect_args={"check_same_thread": False},
     )
 
+    # SQLite ignores foreign keys unless asked per-connection. The schema
+    # leans on FKs (cascade deletes from Meeting down to segments), so this
+    # has to be on for every pooled connection, not just the first.
+    @event.listens_for(engine, "connect")
+    def _enable_foreign_keys(dbapi_connection, _connection_record) -> None:
+        cursor = dbapi_connection.cursor()
+        cursor.execute("PRAGMA foreign_keys = ON")
+        cursor.close()
+
     SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
     run_migrations(engine)
     Base.metadata.create_all(bind=engine)
 
-    # Create default audio channel if it doesn't exist
-    db = SessionLocal()
-    try:
-        default_channel = db.query(AudioChannel).filter(AudioChannel.is_default == True).first()
-        if not default_channel:
-            default_channel = AudioChannel(
-                id=str(uuid.uuid4()),
-                name="Default",
-                is_default=True,
-            )
-            db.add(default_channel)
+    logger.info("Database ready: %s", _db_path)
 
-            for profile in db.query(VoiceProfile).all():
-                db.add(ProfileChannelMapping(
-                    profile_id=profile.id,
-                    channel_id=default_channel.id,
-                ))
-            db.commit()
-    finally:
-        db.close()
 
-    backfill_generation_versions(SessionLocal, Generation, GenerationVersion)
-    seed_builtin_presets(SessionLocal, EffectPreset)
+def new_session():
+    """Return a new Session, or explain why one cannot be made.
+
+    ``init_db`` rebinds the module-level ``SessionLocal``, so anything that
+    captured that name at import time holds ``None`` forever. Callers outside
+    a request — background tasks especially — must go through this accessor,
+    which reads the live binding at call time.
+    """
+    if SessionLocal is None:
+        raise RuntimeError("Database is not initialized — call backend.database.init_db() first.")
+    return SessionLocal()
 
 
 def get_db():
     """Yield a database session (FastAPI dependency)."""
-    db = SessionLocal()
+    db = new_session()
     try:
         yield db
     finally:

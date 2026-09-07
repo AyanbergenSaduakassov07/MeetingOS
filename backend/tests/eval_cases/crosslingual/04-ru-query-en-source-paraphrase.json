@@ -1,0 +1,9 @@
+{
+  "name": "04-ru-query-en-source-paraphrase",
+  "query_language": "ru",
+  "source_language": "en",
+  "query": "Когда перенесли сроки строительства терминала?",
+  "should_retrieve": "The terminal construction timeline was pushed to the fourth quarter",
+  "should_not_retrieve": "The catering contract was renewed for a further year",
+  "notes": "No shared proper noun at all — pure semantic alignment, no lexical crutch."
+}

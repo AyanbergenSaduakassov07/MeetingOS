@@ -1,0 +1,9 @@
+{
+  "name": "06-mixed-language-meeting",
+  "query_language": "en",
+  "source_language": "mixed",
+  "query": "What is the sponsor payment status?",
+  "should_retrieve": "Спонсорский платёж ещё не поступил на счёт",
+  "should_not_retrieve": "The auditorium is booked for the fifteenth",
+  "notes": "A bilingual meeting: English chair, Russian finance report. The relevant answer is in the Russian segment, so a meeting-level language tag would mislabel it. Tests per-segment tagging as well as cross-language retrieval."
+}

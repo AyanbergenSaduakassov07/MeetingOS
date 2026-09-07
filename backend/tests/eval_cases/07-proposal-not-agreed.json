@@ -1,0 +1,37 @@
+{
+  "name": "07-proposal-not-agreed",
+  "complexity": "complex",
+  "notes": "A proposal that was explicitly rejected. Must NOT be extracted as an agreed decision.",
+  "segments": [
+    {
+      "speaker": "Tom",
+      "start_ms": 0,
+      "end_ms": 8000,
+      "text": "I think we should move the meeting to Wednesdays."
+    },
+    {
+      "speaker": "Priya",
+      "start_ms": 8000,
+      "end_ms": 16000,
+      "text": "That clashes with the lab session for half the team."
+    },
+    {
+      "speaker": "Chair",
+      "start_ms": 16000,
+      "end_ms": 24000,
+      "text": "Yeah, that won't work. We'll leave it on Mondays."
+    }
+  ],
+  "expected": {
+    "decisions": [
+      {
+        "gist": "keep the meeting on Mondays rather than moving to Wednesdays",
+        "cites_segment": 2
+      }
+    ],
+    "action_items": [],
+    "risks": [],
+    "commitments": []
+  },
+  "must_not_contain": ["move the meeting to Wednesdays", "meeting moved to Wednesday"]
+}

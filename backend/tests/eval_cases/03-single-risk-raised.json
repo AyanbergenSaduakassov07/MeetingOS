@@ -1,0 +1,36 @@
+{
+  "name": "03-single-risk-raised",
+  "complexity": "simple",
+  "notes": "A blocker raised plainly, with no decision or action attached.",
+  "segments": [
+    {
+      "speaker": "Chair",
+      "start_ms": 0,
+      "end_ms": 8000,
+      "text": "Where are we on the parts order?"
+    },
+    {
+      "speaker": "Sam",
+      "start_ms": 8000,
+      "end_ms": 16000,
+      "text": "The supplier says the motor controllers are back-ordered until March."
+    },
+    {
+      "speaker": "Sam",
+      "start_ms": 16000,
+      "end_ms": 24000,
+      "text": "That's a problem, the competition build has to be finished by February."
+    }
+  ],
+  "expected": {
+    "decisions": [],
+    "action_items": [],
+    "risks": [
+      {
+        "gist": "motor controllers back-ordered until March, after the February build deadline",
+        "cites_segment": 2
+      }
+    ],
+    "commitments": []
+  }
+}

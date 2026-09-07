@@ -98,16 +98,14 @@ def resolve_storage_path(path: str | Path | None) -> Path | None:
     # baked in (e.g. "data/profiles/..."). Joining those directly with
     # _data_dir produces a spurious "<data_dir>/data/profiles/..." nest.
     if stored_path.parts and stored_path.parts[0] == "data":
-        stored_path = (
-            Path(*stored_path.parts[1:]) if len(stored_path.parts) > 1 else Path()
-        )
+        stored_path = Path(*stored_path.parts[1:]) if len(stored_path.parts) > 1 else Path()
 
     return (_data_dir / stored_path).resolve()
 
 
 def get_db_path() -> Path:
     """Get database file path."""
-    return _data_dir / "voicebox.db"
+    return _data_dir / "meetingos.db"
 
 
 def get_profiles_dir() -> Path:
@@ -127,6 +125,13 @@ def get_generations_dir() -> Path:
 def get_captures_dir() -> Path:
     """Get captures directory path."""
     path = _data_dir / "captures"
+    path.mkdir(parents=True, exist_ok=True)
+    return path
+
+
+def get_recordings_dir() -> Path:
+    """Get meeting recordings directory path."""
+    path = _data_dir / "recordings"
     path.mkdir(parents=True, exist_ok=True)
     return path
 
@@ -157,3 +162,63 @@ def get_cloud_web_url() -> str:
 def get_cloud_api_url() -> str:
     """Base URL of the Voicebox Cloud API (bearer-authenticated sync/account)."""
     return os.environ.get("VOICEBOX_CLOUD_API_URL", "https://api.voicebox.sh").rstrip("/")
+
+
+# -- outbound inference endpoints -----------------------------------------
+
+# Every recording and every transcript this system processes is sent to
+# whatever host ``OPENAI_BASE_URL`` names. Read unvalidated, that env var is a
+# one-line data-exfiltration switch: point it anywhere and all meeting audio
+# and text follows, with nothing in the logs saying the destination changed.
+#
+# The allowlist is not a strong control — anyone who can set OPENAI_BASE_URL
+# can usually also set this — but it turns a silent redirect into a deliberate,
+# logged act, which is the difference between a mistake and a decision.
+DEFAULT_ALLOWED_INFERENCE_HOSTS = (
+    "api.openai.com",
+    "api.anthropic.com",
+    "openrouter.ai",
+)
+
+INFERENCE_HOST_ALLOWLIST_ENV = "MEETINGOS_ALLOWED_INFERENCE_HOSTS"
+
+
+def allowed_inference_hosts() -> set[str]:
+    """Hosts meeting audio and transcripts may be sent to."""
+    extra = os.environ.get(INFERENCE_HOST_ALLOWLIST_ENV, "")
+    return set(DEFAULT_ALLOWED_INFERENCE_HOSTS) | {host.strip().lower() for host in extra.split(",") if host.strip()}
+
+
+def validate_inference_base_url(base_url: str | None, *, provider: str) -> str | None:
+    """Refuse a base URL whose host is not allowlisted.
+
+    Returns the URL unchanged when it is acceptable (including ``None``, which
+    means the SDK default). Raises ``ValueError`` otherwise, at startup rather
+    than mid-meeting.
+    """
+    if not base_url:
+        return base_url
+
+    from urllib.parse import urlparse
+
+    parsed = urlparse(base_url)
+    host = (parsed.hostname or "").lower()
+    allowed = allowed_inference_hosts()
+
+    if parsed.scheme not in ("https", "http"):
+        raise ValueError(f"{provider}: base URL {base_url!r} is not http(s).")
+    if parsed.scheme == "http" and host not in ("localhost", "127.0.0.1", "::1"):
+        raise ValueError(
+            f"{provider}: refusing plaintext http to {host!r}. Meeting audio and "
+            "transcripts must not cross the network unencrypted."
+        )
+    if host not in allowed and host not in ("localhost", "127.0.0.1", "::1"):
+        raise ValueError(
+            f"{provider}: host {host!r} is not in the inference allowlist "
+            f"({', '.join(sorted(allowed))}). Every recording and transcript is sent "
+            f"to this host, so adding one is a data-residency decision: set "
+            f"{INFERENCE_HOST_ALLOWLIST_ENV} explicitly to accept it."
+        )
+
+    logger.info("%s: outbound inference endpoint is %s", provider, host)
+    return base_url

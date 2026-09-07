@@ -1,0 +1,31 @@
+{
+  "name": "09-no-decisions-social",
+  "complexity": "complex",
+  "notes": "Pure chatter. The correct answer is four empty lists. Catches over-extraction.",
+  "segments": [
+    {
+      "speaker": "Tom",
+      "start_ms": 0,
+      "end_ms": 8000,
+      "text": "Did anyone watch the match last night?"
+    },
+    {
+      "speaker": "Priya",
+      "start_ms": 8000,
+      "end_ms": 16000,
+      "text": "I missed it, I was still in the lab. Was it any good?"
+    },
+    {
+      "speaker": "Tom",
+      "start_ms": 16000,
+      "end_ms": 24000,
+      "text": "Not really, nil nil. Anyway, is the kettle broken again?"
+    }
+  ],
+  "expected": {
+    "decisions": [],
+    "action_items": [],
+    "risks": [],
+    "commitments": []
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "name": "05-deferred-decision",
+  "complexity": "medium",
+  "notes": "A decision to defer IS a decision, with status deferred. Tests the status enum.",
+  "segments": [
+    {
+      "speaker": "Chair",
+      "start_ms": 0,
+      "end_ms": 8000,
+      "text": "Do we want to cap membership at thirty this year?"
+    },
+    {
+      "speaker": "Tom",
+      "start_ms": 8000,
+      "end_ms": 16000,
+      "text": "I'd rather not settle that without Dana here, she runs the induction."
+    },
+    {
+      "speaker": "Chair",
+      "start_ms": 16000,
+      "end_ms": 24000,
+      "text": "Fair. Let's park the membership cap until next week when Dana's back."
+    }
+  ],
+  "expected": {
+    "decisions": [
+      {
+        "gist": "defer the membership cap decision until Dana is present next week",
+        "cites_segment": 2
+      }
+    ],
+    "action_items": [],
+    "risks": [],
+    "commitments": []
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "name": "05-en-query-kz-source",
+  "query_language": "en",
+  "source_language": "kk",
+  "query": "What did they decide about the drilling safety audit?",
+  "should_retrieve": "Бұрғылау қауіпсіздігі аудиті наурызда аяқталады деп шешілді",
+  "should_not_retrieve": "Кеңсе жиһазына арналған бюджет бекітілді",
+  "notes": "Kazakh source, English query."
+}

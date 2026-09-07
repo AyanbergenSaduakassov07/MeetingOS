@@ -11,13 +11,11 @@ import asyncio
 import ipaddress
 import logging
 from contextvars import ContextVar
-from datetime import datetime, timezone
 
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import Response
 from starlette.types import ASGIApp
-
 
 logger = logging.getLogger(__name__)
 
@@ -28,15 +26,11 @@ _pending_stamps: set[asyncio.Task] = set()
 CLIENT_ID_HEADER = "X-Voicebox-Client-Id"
 
 # Tool handlers read this to apply per-client voice bindings.
-current_client_id: ContextVar[str | None] = ContextVar(
-    "current_client_id", default=None
-)
+current_client_id: ContextVar[str | None] = ContextVar("current_client_id", default=None)
 
 # Remote address of the in-flight request. Used by tools that gate
 # host-filesystem access to loopback callers (see voicebox.transcribe).
-current_remote_addr: ContextVar[str | None] = ContextVar(
-    "current_remote_addr", default=None
-)
+current_remote_addr: ContextVar[str | None] = ContextVar("current_remote_addr", default=None)
 
 
 def request_is_loopback() -> bool:
@@ -53,6 +47,7 @@ def request_is_loopback() -> bool:
         return ipaddress.ip_address(addr).is_loopback
     except ValueError:
         return False
+
 
 # Endpoints that consume X-Voicebox-Client-Id for its MCP-semantic
 # meaning (per-client profile resolution + per-client default_personality).
@@ -122,31 +117,12 @@ def _is_stamped_path(path: str) -> bool:
 
 
 def _stamp_last_seen(client_id: str) -> None:
-    """Update or create the MCPClientBinding row for this client_id."""
-    try:
-        from ..database import get_db
-        from ..database.models import MCPClientBinding
-    except Exception:
-        return
-    try:
-        db = next(get_db())
-    except Exception:
-        return
-    try:
-        row = (
-            db.query(MCPClientBinding)
-            .filter(MCPClientBinding.client_id == client_id)
-            .first()
-        )
-        if row is None:
-            row = MCPClientBinding(client_id=client_id)
-            db.add(row)
-        row.last_seen_at = datetime.now(timezone.utc)
-        db.commit()
-    except Exception:
-        logger.debug(
-            "Could not stamp last_seen_at for %s", client_id, exc_info=True
-        )
-        db.rollback()
-    finally:
-        db.close()
+    """No-op: the MCPClientBinding table went with the Voicebox strip.
+
+    This used to record when each MCP client was last seen. The table is gone,
+    so the import failed on every request and was swallowed by a bare except —
+    a dead code path that looked alive. Left as an explicit no-op rather than
+    removed entirely because the call site documents where per-client state
+    would be recorded when MeetingOS registers its own MCP tools.
+    """
+    return

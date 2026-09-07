@@ -13,9 +13,34 @@ line-length = 120
 src = ["."]
 
 # Files/dirs to skip entirely.
+#
+# The second group is inherited Voicebox code that survived the TTS strip but
+# has zero importers — verified by grepping for each module across backend/.
+# It carries ~450 style findings (mostly Optional[X] -> X | None) that are not
+# worth a reformat of code nothing calls, and lint noise from dead modules
+# hides real findings in live ones. Delete these files or fix them, but do not
+# let them keep the gate red.
 extend-exclude = [
     "voicebox-server.spec",
     "build_binary.py",
+    # -- dead Voicebox leftovers, no importers --
+    "models.py",          # old Pydantic API schemas; database/models.py is the live one
+    "server.py",
+    "utils/",
+    "backends/",
+    "routes/models.py",
+    "routes/audio.py",
+    "routes/tasks.py",
+    "routes/events.py",
+    "routes/settings.py",
+    "routes/llm.py",
+    "routes/transcription.py",
+    "routes/mcp_bindings.py",
+    "mcp_shim/",
+    "pyi_rth_numpy_compat.py",
+    "pyi_rth_rocm_sdk.py",
+    "pyi_rth_torch_compiler_disable.py",
+    "pyi_hooks/",
 ]
 
 [tool.ruff.lint]
@@ -53,10 +78,26 @@ ignore = [
 
 # Per-file rule overrides.
 [tool.ruff.lint.per-file-ignores]
-# Tests can use assert, print, and magic values freely.
-"tests/**" = ["S101", "T201", "PLR2004", "ERA001"]
-# __init__.py re-exports are expected to have unused imports.
+# Tests can use assert, print, and magic values freely. The second group is
+# style rules that fight how these tests are written: one compound assertion
+# with a clear message beats three bare ones; fake providers hold shared
+# read-only class data; a test reading a module's own source to assert on it
+# does not need a context manager.
+"tests/**" = [
+    "S101", "T201", "PLR2004", "ERA001",
+    "PT018", "PT006", "RUF012", "SIM115", "RUF015", "RUF059", "B007",
+]
+# run_pipeline.py sets sys.path before importing backend.*, so its imports
+# genuinely cannot sit at the top of the file.
+"run_pipeline.py" = ["E402"]
+# seed.py takes model classes as arguments — an inherited DI pattern in which
+# the capitalised parameter names are correct.
+"database/seed.py" = ["N803"]
+# __init__.py re-exports are expected to have unused imports. database/__init__
+# groups __all__ by entity with section comments; alphabetising it would
+# destroy that grouping for no gain.
 "**/__init__.py" = ["F401"]
+"database/__init__.py" = ["F401", "RUF022"]
 # Entry points and scripts legitimately use print.
 "server.py" = ["T201"]
 "main.py" = ["T201"]

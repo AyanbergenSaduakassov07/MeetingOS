@@ -1,0 +1,14 @@
+{
+  "name": "06-near-miss-narrowing-a-figure",
+  "kind": "near_miss",
+  "expected": "refined",
+  "notes": "A range becoming a specific number is the decision getting sharper, not reversing. 500-600k then 550k is one decision, not two conflicting ones.",
+  "prior": {
+    "meeting": "January board",
+    "claim": "The expansion budget will be somewhere between 500,000 and 600,000"
+  },
+  "new": {
+    "meeting": "March board",
+    "claim": "The expansion budget is set at 550,000"
+  }
+}

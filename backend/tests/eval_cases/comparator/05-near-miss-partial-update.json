@@ -1,0 +1,14 @@
+{
+  "name": "05-near-miss-partial-update",
+  "kind": "near_miss",
+  "expected": "refined",
+  "notes": "Progress on the same plan, one step further. A partial update is refinement, not contradiction — flagging it would train readers to ignore the conflict list.",
+  "prior": {
+    "meeting": "January board",
+    "claim": "Commission the Aktau jetty dredging survey"
+  },
+  "new": {
+    "meeting": "March board",
+    "claim": "The Aktau jetty dredging survey is commissioned and reports in April"
+  }
+}

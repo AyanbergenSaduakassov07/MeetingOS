@@ -1,0 +1,14 @@
+{
+  "name": "01-reversal-explicit",
+  "kind": "genuine",
+  "expected": "reversed",
+  "notes": "The meeting knows it is overturning the earlier decision and says so.",
+  "prior": {
+    "meeting": "January board",
+    "claim": "Approve the Aktau expansion phase two capex of 500,000"
+  },
+  "new": {
+    "meeting": "June board",
+    "claim": "Cancel the Aktau expansion phase two entirely; we are not proceeding with the capex"
+  }
+}

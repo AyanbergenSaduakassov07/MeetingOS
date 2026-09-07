@@ -136,7 +136,7 @@ dev: _ensure-venv _ensure-sidecar
         echo "Backend already running on http://localhost:17493"
     else
         echo "Starting backend on http://localhost:17493 ..."
-        {{ venv_bin }}/uvicorn backend.main:app --reload --port 17493 &
+        {{ venv_bin }}/python -m uvicorn backend.main:app --reload --port 17493 &
         backend_pid=$!
         sleep 2
     fi
@@ -157,10 +157,13 @@ dev: _ensure-venv _ensure-sidecar
     Write-Host "Starting Tauri desktop app..."; \
     try { Set-Location "{{ tauri_dir }}"; bun run tauri dev } finally { if ($backendJob) { taskkill /PID $backendJob.Id /T /F 2>$null | Out-Null } }
 
+# `just dev-server` and `just dev-backend` are the same thing.
+alias dev-server := dev-backend
+
 # Start backend only
 [unix]
 dev-backend: _ensure-venv
-    {{ venv_bin }}/uvicorn backend.main:app --reload --port 17493
+    {{ venv_bin }}/python -m uvicorn backend.main:app --reload --port 17493
 
 [windows]
 dev-backend: _ensure-venv
@@ -186,7 +189,7 @@ dev-web: _ensure-venv
         echo "Backend already running on http://localhost:17493"
     else
         echo "Starting backend on http://localhost:17493 ..."
-        {{ venv_bin }}/uvicorn backend.main:app --reload --port 17493 &
+        {{ venv_bin }}/python -m uvicorn backend.main:app --reload --port 17493 &
         backend_pid=$!
         sleep 2
     fi
@@ -325,14 +328,26 @@ fix-python: _ensure-venv
 test: _ensure-venv
     {{ venv_bin }}/python -m pytest {{ backend_dir }}/tests -v
 
-# E2E: generate with every TTS model against the frozen binary (pass extra flags like --only kokoro)
-[unix]
-test-models *ARGS: _ensure-venv
-    {{ venv_bin }}/python {{ backend_dir }}/tests/test_all_models_e2e.py {{ ARGS }}
+# Score extraction (and, with --comparator, the claim comparator) against the
+# frozen eval cases. Needs provider credentials.
+eval *ARGS: _ensure-venv
+    {{ venv_bin }}/python -m backend.eval.run_eval {{ ARGS }}
 
-[windows]
-test-models *ARGS: _ensure-venv
-    & "{{ python }}" {{ backend_dir }}/tests/test_all_models_e2e.py {{ ARGS }}
+# Eval as a CI gate: non-zero exit if precision/recall regress past threshold.
+# Refuses to give a verdict until `just eval --baseline` has run against a real
+# provider — a guessed threshold either passes everything or fails everything.
+eval-ci: _ensure-venv
+    {{ venv_bin }}/python -m backend.eval.run_eval --ci
+
+# Exercise the eval harness with a deterministic fake. Proves the scorer works;
+# says nothing about extraction quality. The cross-language suite scoring 0.00
+# here is correct — the stub embedder is monolingual English.
+eval-stub: _ensure-venv
+    {{ venv_bin }}/python -m backend.eval.run_eval --stub --comparator --crosslingual
+
+# Delete meetings past their org's retention_days (dry run without --commit)
+purge *ARGS: _ensure-venv
+    {{ venv_bin }}/python -m backend.meetings.retention {{ ARGS }}
 
 # ─── Database ─────────────────────────────────────────────────────────
 
@@ -348,12 +363,12 @@ db-init: _ensure-venv
 # Reset database (delete + reinit)
 [unix]
 db-reset:
-    rm -f {{ backend_dir }}/data/voicebox.db
+    rm -f data/meetingos.db
     just db-init
 
 [windows]
 db-reset:
-    if (Test-Path "{{ backend_dir }}/data/voicebox.db") { Remove-Item -Force "{{ backend_dir }}/data/voicebox.db" }
+    if (Test-Path "data/meetingos.db") { Remove-Item -Force "data/meetingos.db" }
     just db-init
 
 # ─── Utilities ────────────────────────────────────────────────────────

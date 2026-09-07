@@ -26,15 +26,15 @@ Enforced by ruff's `isort` rules (rule set `I`).
 **Grouping** -- three blocks separated by a blank line:
 
 ```python
-import asyncio                          # 1. stdlib
+import asyncio  # 1. stdlib
 from pathlib import Path
 
-import numpy as np                      # 2. third-party
+import numpy as np  # 2. third-party
 from fastapi import APIRouter, HTTPException
 from sqlalchemy.orm import Session
 
 from backend.config import get_data_dir  # 3. local (absolute)
-from .database import get_db            #    or relative
+from .database import get_db  #    or relative
 ```
 
 **Rules:**
@@ -54,8 +54,11 @@ Python 3.12 means we use **built-in generics and union syntax natively**. No `fr
 # Yes
 def process(items: list[str], config: dict[str, int] | None = None) -> tuple[int, str]: ...
 
+
 # No
 from typing import List, Dict, Optional, Tuple
+
+
 def process(items: List[str], config: Optional[Dict[str, int]] = None) -> Tuple[int, str]: ...
 ```
 
@@ -167,7 +170,7 @@ Inline comments (end-of-line) are fine when they add information the code can't 
 # Yes -- explains a non-obvious constraint or gives context:
 audio, sr = load_audio(path, sr=24000)  # Qwen expects 24kHz mono
 _generation_queue: asyncio.Queue = None  # type: ignore  # initialized at startup
-"tauri://localhost",         # Tauri webview (macOS)
+("tauri://localhost",)  # Tauri webview (macOS)
 
 # No -- restates the code:
 # Check if profile name already exists
@@ -204,6 +207,7 @@ Always add a reason after `noqa` and `type: ignore`:
 
 ```python
 import intel_extension_for_pytorch  # noqa: F401 -- side-effect import enables XPU
+
 _queue: asyncio.Queue = None  # type: ignore[assignment]  # initialized at startup
 ```
 
@@ -242,6 +246,7 @@ CRUD modules and services raise `ValueError`, `FileNotFoundError`, or (post-refa
 # backend/errors.py  (to be created in Phase 4)
 class NotFoundError(Exception):
     """Raised when a requested resource does not exist."""
+
 
 class ConflictError(Exception):
     """Raised on uniqueness constraint violations."""

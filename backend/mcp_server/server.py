@@ -1,9 +1,9 @@
 """Construct the FastMCP server and mount it on the FastAPI app.
 
-The MCP endpoint lives at ``/mcp`` (Streamable HTTP transport). Modern MCP
-clients (Claude Code, Cursor, Windsurf, VS Code MCP extensions) connect
-directly via URL; older stdio-only clients use the ``voicebox-mcp`` shim
-binary bundled with the desktop app.
+The MCP endpoint lives at ``/mcp`` (Streamable HTTP transport). MCP clients
+(Claude Code, Cursor, Windsurf, VS Code MCP extensions) connect directly via
+URL. The stdio shim that shipped with the desktop app is gone along with it;
+stdio-only clients need a proxy of their own.
 """
 
 from __future__ import annotations
@@ -25,12 +25,11 @@ logger = logging.getLogger(__name__)
 def build_mcp_server() -> FastMCP:
     """Create the FastMCP instance with Voicebox tools registered."""
     mcp = FastMCP(
-        name="voicebox",
+        name="meetingos",
         instructions=(
-            "Voicebox is a local voice I/O layer. Use `voicebox.speak` to "
-            "play text in a voice profile, `voicebox.transcribe` for "
-            "audio→text, and the `list_*` tools to discover profiles and "
-            "captures."
+            "MeetingOS is a meeting intelligence layer. It exposes no tools "
+            "in v0.1 — meeting-specific tools (e.g. ask_meeting) are planned "
+            "once transcript extraction and retrieval land."
         ),
     )
     register_tools(mcp)

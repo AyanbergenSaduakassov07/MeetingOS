@@ -1,0 +1,14 @@
+{
+  "name": "07-near-miss-unrelated-subjects",
+  "kind": "near_miss",
+  "expected": "consistent",
+  "notes": "Two decisions with nothing in common. Must not be forced into a relationship.",
+  "prior": {
+    "meeting": "January board",
+    "claim": "Approve the Aktau expansion phase two capex of 500,000"
+  },
+  "new": {
+    "meeting": "April ops",
+    "claim": "Move the weekly stand-up from Monday to Tuesday"
+  }
+}

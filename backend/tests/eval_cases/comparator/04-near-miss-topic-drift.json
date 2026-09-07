@@ -1,0 +1,14 @@
+{
+  "name": "04-near-miss-topic-drift",
+  "kind": "near_miss",
+  "expected": "consistent",
+  "notes": "Shares the words 'Aktau' and 'budget' but is about a different budget entirely. Lexical overlap is not conflict — this is the false positive the comparator must not make.",
+  "prior": {
+    "meeting": "January board",
+    "claim": "Approve the Aktau expansion phase two capex of 500,000"
+  },
+  "new": {
+    "meeting": "March board",
+    "claim": "Approve the Aktau site catering budget of 12,000 for the year"
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "name": "02-contradiction-unnoticed",
+  "kind": "genuine",
+  "expected": "contradicted",
+  "notes": "Two incompatible figures for the same commitment, with no acknowledgement that anything changed. This is the case that most needs surfacing — nobody in the room noticed, so nothing else will catch it.",
+  "prior": {
+    "meeting": "January board",
+    "claim": "The showcase will be held on 15 May in the main hall"
+  },
+  "new": {
+    "meeting": "March board",
+    "claim": "The showcase is on 22 May in the main hall, as agreed"
+  }
+}

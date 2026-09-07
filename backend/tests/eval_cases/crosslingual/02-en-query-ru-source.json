@@ -1,0 +1,9 @@
+{
+  "name": "02-en-query-ru-source",
+  "query_language": "en",
+  "source_language": "ru",
+  "query": "What was decided about the Aktau port expansion?",
+  "should_retrieve": "Совет директоров одобрил капитальный бюджет расширения порта Актау",
+  "should_not_retrieve": "Совет увеличил бюджет столовой для персонала",
+  "notes": "The reverse direction. Both must work or the alignment is one-way."
+}
