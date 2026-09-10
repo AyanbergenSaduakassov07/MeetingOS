@@ -52,6 +52,7 @@ from sqlalchemy.orm import Session
 
 from ..ai import LLMProvider, ProviderError, get_llm_provider
 from ..database import Decision, Evidence
+from ..meetings.redaction import redact_for_egress
 
 logger = logging.getLogger(__name__)
 
@@ -169,9 +170,18 @@ Rules:
 
 
 def _render_claim(label: str, claim: str, evidence_id: str | None, meeting: str | None) -> str:
-    """One side of the comparison, flattened so it cannot forge a line."""
-    text = " ".join((claim or "").split())[:MAX_CLAIM_CHARS]
-    return f"{label}:\n  evidence_id: {evidence_id or 'none'}\n  meeting: {meeting or 'unknown'}\n  claim: {text}"
+    """One side of the comparison, flattened and redacted before it leaves.
+
+    The meeting title is flattened too. It was the one field that escaped it,
+    and a title is operator-supplied text, so a newline in it could forge a
+    ``claim:`` line inside the fence.
+
+    Both claims are redacted: a decision title is meeting content, and this
+    call sends two of them to a third-party model.
+    """
+    text = redact_for_egress(" ".join((claim or "").split())[:MAX_CLAIM_CHARS])
+    title = redact_for_egress(" ".join((meeting or "unknown").split()))
+    return f"{label}:\n  evidence_id: {evidence_id or 'none'}\n  meeting: {title}\n  claim: {text}"
 
 
 def _build_prompt(

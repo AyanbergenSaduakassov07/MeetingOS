@@ -44,6 +44,7 @@ import re
 from dataclasses import dataclass, field
 
 from ..ai import LLMProvider, ProviderError, get_llm_provider
+from ..meetings.redaction import redact_for_egress
 from .base import MemoryRecord
 from .retrieval import search_corpus
 
@@ -191,25 +192,55 @@ def _render_records(records: list[MemoryRecord]) -> str:
 
     Each record gets its own id line and its text flattened onto one line, so a
     chunk containing newlines cannot forge a record boundary and smuggle itself
-    in as a second, differently-attributed source.
+    in as a second, differently-attributed source. The title is flattened for
+    the same reason: it is operator-supplied text (a meeting name, an uploaded
+    filename) sitting inside the fence, and it was the one field here that
+    could still carry a newline.
+
+    Every excerpt is redacted before it leaves the machine. This is the widest
+    egress path in the product — one question can pull chunks from any meeting
+    or document in the tenant — and it was previously the only retrieval path
+    that sent raw text: the per-meeting copilot redacted its segments, this one
+    redacted the question and nothing else.
     """
     lines: list[str] = []
     for record in records:
         kind, _, title = _source_of(record)
-        label = f"{kind}: {title or 'untitled'}"
+        label = " ".join(f"{kind}: {title or 'untitled'}".split())
         stamp = f" @{record.start_ms // 1000}s" if record.start_ms is not None else ""
         language = f" [{record.language}]" if getattr(record, "language", None) else ""
-        text = " ".join((record.text or "").split())
+        text = redact_for_egress(" ".join((record.text or "").split()))
         lines.append(f"[{record.record_id}] ({label}{stamp}){language} {text}")
     return "\n".join(lines)
+
+
+# A language name, and nothing that could read as a further instruction.
+# ``answer_language`` is the only caller-supplied value that lands in the
+# instruction channel rather than inside a data fence, so it is the one field
+# here that has to be validated rather than merely fenced. Letters, spaces and
+# hyphens, short: "Russian", "Brazilian Portuguese", "kk-KZ". Anything else is
+# dropped and the answer comes back in the corpus language.
+_LANGUAGE_NAME = re.compile(r"^[A-Za-z\u0400-\u04FF][A-Za-z\u0400-\u04FF \-]{0,29}$")
+
+
+def _safe_language(answer_language: str | None) -> str | None:
+    """The requested language if it looks like one, otherwise nothing."""
+    candidate = (answer_language or "").strip()
+    if not candidate:
+        return None
+    if not _LANGUAGE_NAME.match(candidate):
+        logger.warning("Rejected answer_language %r: not a plain language name", candidate[:60])
+        return None
+    return candidate
 
 
 def _build_prompt(question: str, excerpt: str, answer_language: str | None) -> str:
     """Dynamic half of the prompt, kept last so the prefix stays cacheable."""
     language_clause = ""
-    if answer_language:
+    language = _safe_language(answer_language)
+    if language:
         language_clause = (
-            f"\nWrite your answer in {answer_language}. Quote the excerpts in their "
+            f"\nWrite your answer in {language}. Quote the excerpts in their "
             "original language; do not translate them.\n"
         )
     return (
@@ -217,7 +248,7 @@ def _build_prompt(question: str, excerpt: str, answer_language: str | None) -> s
         f"{excerpt}\n"
         "--- END CORPUS EXCERPTS ---\n\n"
         "--- BEGIN QUESTION (untrusted data) ---\n"
-        f"{question}\n"
+        f"{redact_for_egress(question)}\n"
         "--- END QUESTION ---\n"
         f"{language_clause}\n"
         "Answer using only the excerpts above, citing the record ids you used."

@@ -163,8 +163,27 @@ class OpenAIProvider(LLMProvider):
                 raise self._wrap_error(exc) from exc
 
         response = await retry_with_backoff(_call, description="openai.generate")
-        text = response.choices[0].message.content or ""
+        text = self._first_choice(response, "generate").message.content or ""
         return Completion(text=text, model=response.model, usage=self._usage(response))
+
+    @staticmethod
+    def _first_choice(response, operation: str):
+        """The one choice, or a ProviderError naming what came back instead.
+
+        ``response.choices`` is not guaranteed to be a non-empty list. An
+        OpenAI-compatible gateway that fails upstream mid-request returns
+        ``choices: null``, and indexing that raised a bare TypeError straight
+        past every caller — all of which catch ProviderError, because that is
+        the documented failure of this interface. Observed against OpenRouter,
+        not theorised.
+        """
+        choices = getattr(response, "choices", None)
+        if not choices:
+            raise ProviderError(
+                f"{operation}: the provider returned no choices "
+                f"(model={getattr(response, 'model', 'unknown')!r}). The upstream request likely failed."
+            )
+        return choices[0]
 
     async def extract(
         self,
@@ -197,7 +216,7 @@ class OpenAIProvider(LLMProvider):
 
         response = await retry_with_backoff(_call, description="openai.extract")
 
-        choice = response.choices[0]
+        choice = self._first_choice(response, "extract")
         if choice.finish_reason == "length":
             raise ProviderError(
                 f"Extraction hit the {self.resolved_max_tokens(max_tokens)}-token ceiling and was truncated."
@@ -215,6 +234,21 @@ class OpenAIProvider(LLMProvider):
             raise ProviderError(f"Extraction did not satisfy {schema.__name__}: {exc}") from exc
 
     async def embed(self, texts: list[str]) -> list[list[float]]:
+        from ...meetings.egress_log import host_of, logged_call
+
+        with logged_call(
+            self.config.name,
+            "embed",
+            model=self.config.embedding_model or self.config.model,
+            endpoint_host=host_of(self.config.base_url, default=self._default_host()),
+            texts=texts,
+        ):
+            return await self._embed(texts)
+
+    def _default_host(self) -> str:
+        return "api.openai.com" if self.config.name == "openai" else "api.anthropic.com"
+
+    async def _embed(self, texts: list[str]) -> list[list[float]]:
         if not texts:
             return []
 

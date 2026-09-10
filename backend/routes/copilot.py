@@ -18,6 +18,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
+from .. import config
 from ..database import Organization, get_db
 from ..memory.org_copilot import OrgCopilotError, ask_corpus
 from .limits import limit_ask
@@ -68,8 +69,38 @@ class OrgAskResponse(BaseModel):
 
 
 def _resolve_org_id(db: Session, org_id: str | None) -> str:
+    """The organisation to search, refusing to search someone else's.
+
+    ``org_id`` arrives in the request body and nothing authenticates the
+    caller, so on a multi-tenant install this one parameter reads a whole
+    tenant's corpus. Real authentication and a server-side binding are the fix
+    and are not built here; ``MEETINGOS_ORG_ID`` is the control that works
+    without them. When it is set this process serves exactly one organisation
+    and a request naming another is refused, so an operator running more than
+    one tenant has something to reach for today.
+
+    The id is also checked to exist. Passing an unknown one used to fall
+    through to retrieval and come back "not discussed", which reads as an
+    answer about the corpus rather than a mistake in the request.
+    """
+    pinned = config.pinned_org_id()
+    if pinned:
+        if org_id and org_id != pinned:
+            logger.warning("Refused a copilot question scoped to org %s; this process serves one org", org_id)
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="This deployment serves a single organization and it is not the one requested.",
+            )
+        org_id = pinned
+
     if org_id:
+        if db.query(Organization).filter_by(id=org_id).first() is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Organization {org_id} not found",
+            )
         return org_id
+
     orgs = db.query(Organization).limit(2).all()
     if len(orgs) != 1:
         raise HTTPException(

@@ -50,31 +50,12 @@ from dataclasses import dataclass, field
 logger = logging.getLogger(__name__)
 
 
-@dataclass(frozen=True)
-class Rule:
-    name: str
-    pattern: re.Pattern[str]
+# Rules now live in redaction_rules.py, where they can be configured per org.
+# The names and behaviour of everything below are unchanged, so no call site
+# needed to move.
+from .redaction_rules import ALL_RULES, RedactionConfig, Rule  # noqa: E402
 
-    def placeholder(self) -> str:
-        return f"[redacted:{self.name}]"
-
-
-# Ordered: the more specific pattern must win, so an email is not first eaten
-# by the URL rule and a card number is not split by the phone rule.
-RULES: tuple[Rule, ...] = (
-    Rule("email", re.compile(r"\b[\w.+-]+@[\w-]+\.[\w.-]+\b")),
-    Rule("url", re.compile(r"\bhttps?://\S+|\bwww\.[\w.-]+\.\w{2,}\S*")),
-    Rule("iban", re.compile(r"\b[A-Z]{2}\d{2}[A-Z0-9]{10,30}\b")),
-    # 13-19 digits, optionally spaced or hyphened: card numbers.
-    Rule("card", re.compile(r"\b(?:\d[ -]?){13,19}\b")),
-    Rule("ni_number", re.compile(r"\b[A-CEGHJ-PR-TW-Z]{2}\s?\d{2}\s?\d{2}\s?\d{2}\s?[A-D]\b")),
-    Rule("ssn", re.compile(r"\b\d{3}-\d{2}-\d{4}\b")),
-    Rule("sort_code", re.compile(r"\b\d{2}-\d{2}-\d{2}\b")),
-    # UK-ish and international phone shapes. Runs after card so a long card
-    # number is not caught here first.
-    Rule("phone", re.compile(r"(?:\+\d{1,3}[ -]?)?(?:\(?\d{2,5}\)?[ -]?){2,4}\d{2,4}\b")),
-    Rule("postcode", re.compile(r"\b[A-Z]{1,2}\d[A-Z\d]?\s?\d[A-Z]{2}\b", re.IGNORECASE)),
-)
+RULES: tuple[Rule, ...] = ALL_RULES
 
 ENV_FLAG = "MEETINGOS_REDACT_TRANSCRIPTS"
 
@@ -93,12 +74,40 @@ class RedactionResult:
         return self.total > 0
 
 
+# Set by the settings layer at startup, or by a caller for one operation. When
+# None the environment flag decides, which keeps the original behaviour for
+# anyone who never opens the privacy page.
+_active_config: RedactionConfig | None = None
+
+
+def set_active_config(config: RedactionConfig | None) -> None:
+    """Install the org's redaction config as the process default."""
+    global _active_config
+    _active_config = config
+    if config is not None:
+        logger.info(
+            "Redaction config: enabled=%s, %d rule(s) active",
+            config.enabled,
+            len(config.active_rules()),
+        )
+
+
+def active_config() -> RedactionConfig:
+    """The config in force, falling back to the environment flag."""
+    if _active_config is not None:
+        return _active_config
+    return RedactionConfig(
+        enabled=os.environ.get(ENV_FLAG, "").strip().lower() in {"1", "true", "yes", "on"},
+        rules=[rule.name for rule in ALL_RULES],
+    )
+
+
 def is_enabled() -> bool:
     """Opt-in, because redaction trades extraction detail for exposure."""
-    return os.environ.get(ENV_FLAG, "").strip().lower() in {"1", "true", "yes", "on"}
+    return active_config().enabled
 
 
-def redact(text: str) -> RedactionResult:
+def redact(text: str, *, config: RedactionConfig | None = None) -> RedactionResult:
     """Replace identifier-shaped spans with typed placeholders.
 
     The placeholder keeps the *type* so the model can still reason about the
@@ -110,7 +119,7 @@ def redact(text: str) -> RedactionResult:
 
     counts: dict[str, int] = {}
     redacted = text
-    for rule in RULES:
+    for rule in (config or active_config()).active_rules():
         # A placeholder from an earlier rule must not be re-matched by a later
         # one, so match around the already-substituted spans.
         parts = re.split(r"(\[redacted:[a-z_]+\])", redacted)
@@ -142,9 +151,15 @@ def redact_many_for_egress(texts: list[str]) -> list[str]:
     return [redact_for_egress(text) for text in texts]
 
 
-def redact_for_egress(text: str) -> str:
-    """Redact only when the flag is set. Applied at every egress point."""
-    if not is_enabled():
+def redact_for_egress(text: str, *, force: bool = False) -> str:
+    """Redact when the flag is set — or when the caller says this text is
+    sensitive whatever the flag says.
+
+    ``force`` exists for content an operator has explicitly marked, where the
+    org-wide opt-in is the wrong question. Someone who ticks "sensitive" on a
+    contract has already answered it for that file.
+    """
+    if not (force or is_enabled()):
         return text
     result = redact(text)
     if result.changed:

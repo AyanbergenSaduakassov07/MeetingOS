@@ -222,3 +222,26 @@ def validate_inference_base_url(base_url: str | None, *, provider: str) -> str |
 
     logger.info("%s: outbound inference endpoint is %s", provider, host)
     return base_url
+
+
+# Tenant pinning.
+#
+# There is no authentication in v0.1, and every route that takes an ``org_id``
+# takes it from the request. For the org-wide copilot that is a whole-tenant
+# read behind one parameter: pass another org's id and its entire corpus
+# answers your question.
+#
+# Authentication plus a server-side binding is the real fix and is not built
+# here. ``MEETINGOS_ORG_ID`` is the control that can exist without it: set it,
+# and the process serves exactly one organisation — a request naming any other
+# is refused rather than answered. Unset, behaviour is unchanged, which keeps
+# single-org development installs working as they do today.
+#
+# This bounds a misdirected or curious request. It does not stop anyone who can
+# reach the port and set the variable, because nothing here can.
+PINNED_ORG_ENV = "MEETINGOS_ORG_ID"
+
+
+def pinned_org_id() -> str | None:
+    """The single organisation this process serves, if one was pinned."""
+    return os.environ.get(PINNED_ORG_ENV, "").strip() or None

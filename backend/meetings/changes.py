@@ -32,6 +32,7 @@ from dataclasses import asdict, dataclass, field
 from sqlalchemy.orm import Session
 
 from ..database import ActionItem, Decision, Meeting, Risk
+from .redaction import redact_for_egress
 
 logger = logging.getLogger(__name__)
 
@@ -247,7 +248,10 @@ async def summarise_changes(changes: ChangeSet, *, provider=None) -> str | None:
         f"(in {change.changed_in_meeting_title or 'a later meeting'})"
         for change in changes.changes
     ]
-    prompt = "Changes computed from the database:\n" + "\n".join(lines) + "\n\nWrite the short paragraph."
+    # Old and new values are verbatim decision text. Redact before egress.
+    prompt = (
+        "Changes computed from the database:\n" + redact_for_egress("\n".join(lines)) + "\n\nWrite the short paragraph."
+    )
 
     try:
         if provider is None:

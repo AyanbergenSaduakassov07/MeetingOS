@@ -32,6 +32,7 @@ import struct
 
 from sqlalchemy import text as sql_text
 
+from ...meetings.redaction import redact_many_for_egress
 from ..base import (
     RECORD_TYPES,
     IndexReport,
@@ -104,16 +105,15 @@ class SqliteMemoryIndex(MemoryIndex):
                 """
             )
         )
-        for statement in (
-            "CREATE INDEX IF NOT EXISTS ix_memory_org ON memory_records (org_id)",
-            "CREATE INDEX IF NOT EXISTS ix_memory_meeting ON memory_records (meeting_id)",
-            "CREATE INDEX IF NOT EXISTS ix_memory_type ON memory_records (record_type)",
-            "CREATE INDEX IF NOT EXISTS ix_memory_document ON memory_records (document_id)",
-        ):
-            db.execute(sql_text(statement))
-
         # Columns added after the table shipped. SQLite has no
         # "ADD COLUMN IF NOT EXISTS", so this checks first.
+        #
+        # This runs BEFORE the index statements below and must stay there. On a
+        # database whose memory_records predates document support, CREATE TABLE
+        # IF NOT EXISTS is a no-op, so indexing document_id before adding it
+        # raised "no such column: document_id" — and because every caller
+        # catches indexing errors and logs a warning, the whole corpus index
+        # died silently on exactly the installs that had been running longest.
         existing = {row[1] for row in db.execute(sql_text("PRAGMA table_info(memory_records)"))}
         for column, ddl in (
             ("language", "language TEXT"),
@@ -122,6 +122,14 @@ class SqliteMemoryIndex(MemoryIndex):
         ):
             if column not in existing:
                 db.execute(sql_text(f"ALTER TABLE memory_records ADD COLUMN {ddl}"))
+
+        for statement in (
+            "CREATE INDEX IF NOT EXISTS ix_memory_org ON memory_records (org_id)",
+            "CREATE INDEX IF NOT EXISTS ix_memory_meeting ON memory_records (meeting_id)",
+            "CREATE INDEX IF NOT EXISTS ix_memory_type ON memory_records (record_type)",
+            "CREATE INDEX IF NOT EXISTS ix_memory_document ON memory_records (document_id)",
+        ):
+            db.execute(sql_text(statement))
 
         # FTS5 mirror. `content=` would avoid duplicating the text, but an
         # external-content table needs triggers kept in sync by hand; at this
@@ -223,16 +231,38 @@ class SqliteMemoryIndex(MemoryIndex):
         return rows
 
     def _collect_document(self, db, document_id: str) -> list[dict]:
-        """Every indexable chunk of one document."""
+        """Every indexable chunk of one document.
+
+        A document the operator flagged ``is_sensitive`` is redacted here,
+        before it is indexed, regardless of the org-wide redaction setting.
+        Until now that flag changed nothing at all — a contract marked
+        sensitive was embedded and quoted to a third-party model exactly like a
+        standup transcript, which made it a label rather than a control.
+
+        Redacting at index time rather than at each egress point is the choice
+        that cannot be forgotten later: every downstream path — the embedding
+        call, the copilot excerpt, anything added next — reads from the index,
+        so none of them can reintroduce the raw text. The cost is that
+        searching a sensitive document *for* a redacted span no longer works.
+        That is the trade the flag is asking for. The source text is untouched
+        in ``documents.extracted_text`` and ``document_chunks.text``.
+        """
         from ...database import Document, DocumentChunk
+        from ...meetings.redaction import redact_for_egress
 
         document = db.query(Document).filter_by(id=document_id).first()
         if document is None:
             return []
 
+        sensitive = bool(document.is_sensitive)
+        if sensitive:
+            logger.info("Document %s is marked sensitive; indexing it redacted", document_id)
+
         rows = []
         for chunk in db.query(DocumentChunk).filter_by(document_id=document_id).order_by(DocumentChunk.ordinal).all():
             text = (chunk.text or "").strip()
+            if sensitive:
+                text = redact_for_egress(text, force=True)
             if not text:
                 continue
             rows.append(
@@ -309,7 +339,12 @@ class SqliteMemoryIndex(MemoryIndex):
                     from ...ai import get_embedding_provider
 
                     embedder = get_embedding_provider()
-                vectors = await embedder.embed([row["text"] for row in stale])
+                # Embedding is egress: the text of every transcript claim and
+                # every document chunk is posted to the embedding provider.
+                # Redacting only the text that reaches the *generate* call
+                # leaves this path wide open, which is the same bypass already
+                # closed once in the per-meeting copilot.
+                vectors = await embedder.embed(redact_many_for_egress([row["text"] for row in stale]))
                 if len(vectors) != len(stale):
                     raise ValueError(f"Embedder returned {len(vectors)} vectors for {len(stale)} records")
 
@@ -484,7 +519,7 @@ class SqliteMemoryIndex(MemoryIndex):
                     from ...ai import get_embedding_provider
 
                     embedder = get_embedding_provider()
-                query_vector = (await embedder.embed([query]))[0]
+                query_vector = (await embedder.embed(redact_many_for_egress([query])))[0]
                 for row in rows:
                     if not row[10] or (row[11] and row[11] != len(query_vector)):
                         continue

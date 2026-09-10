@@ -69,6 +69,7 @@ async def search_corpus(
     min_score: float = DEFAULT_MIN_SCORE,
     mode: MatchKind = "hybrid",
     collapse_duplicates: bool = True,
+    across_all_orgs: bool = False,
     embedder=None,
     db=None,
 ) -> list[MemoryRecord]:
@@ -81,7 +82,22 @@ async def search_corpus(
     ``collapse_duplicates`` folds records that share an Evidence id down to the
     most specific one, so a claim indexed as both a Decision and its Evidence
     does not occupy two slots of a budget sized for eight.
+
+    ``org_id`` is required. Omitting it raises rather than searching every
+    organisation; ``across_all_orgs=True`` is how you ask for that on purpose.
     """
+    if org_id is None and not across_all_orgs:
+        # Tenancy fails closed. The backend applies no org filter when org_id is
+        # None, so an unscoped call used to search every organisation in the
+        # database and say nothing about it — a forgotten argument, not an
+        # attack, is all it took. Searching everything is still possible and now
+        # has to be asked for by name.
+        raise ValueError(
+            "search_corpus needs an org_id. Pass across_all_orgs=True to search every organisation deliberately."
+        )
+    if across_all_orgs and org_id is None:
+        logger.warning("Corpus search ran across every organisation by explicit request")
+
     index = get_memory_index()
     limit = max(1, min(limit, MAX_LIMIT))
     # Over-fetch before collapsing, or folding duplicates would return fewer

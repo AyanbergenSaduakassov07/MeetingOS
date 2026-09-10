@@ -239,6 +239,21 @@ class AnthropicProvider(LLMProvider):
         raise ProviderError(f"Anthropic returned no {EXTRACT_TOOL_NAME} tool call.")
 
     async def embed(self, texts: list[str]) -> list[list[float]]:
+        from ...meetings.egress_log import host_of, logged_call
+
+        with logged_call(
+            self.config.name,
+            "embed",
+            model=self.config.embedding_model or self.config.model,
+            endpoint_host=host_of(self.config.base_url, default=self._default_host()),
+            texts=texts,
+        ):
+            return await self._embed(texts)
+
+    def _default_host(self) -> str:
+        return "api.openai.com" if self.config.name == "openai" else "api.anthropic.com"
+
+    async def _embed(self, texts: list[str]) -> list[list[float]]:
         raise ProviderError(
             "Anthropic exposes no embeddings endpoint. Set AI_EMBEDDING_PROVIDER "
             "to a provider whose config reports supports_embeddings=True."

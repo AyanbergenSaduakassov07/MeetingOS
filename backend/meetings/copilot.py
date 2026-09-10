@@ -267,13 +267,16 @@ def _render_excerpt(segments: list[TranscriptSegment], labels: dict[str, str]) -
 
 
 def _build_prompt(question: str, excerpt: str) -> str:
+    # The question is egress too. A user who types a salary figure into the box
+    # is doing the thing redaction exists to prevent, and "it came from the
+    # user" does not make it less disclosed.
     """The dynamic half of the prompt, kept last so the prefix stays cacheable."""
     return (
         "--- BEGIN TRANSCRIPT EXCERPT (untrusted data) ---\n"
         f"{excerpt}\n"
         "--- END TRANSCRIPT EXCERPT ---\n\n"
         "--- BEGIN QUESTION (untrusted data) ---\n"
-        f"{question}\n"
+        f"{redact_for_egress(question)}\n"
         "--- END QUESTION ---\n\n"
         "Answer using only the excerpt above, citing the segment ids you used."
     )

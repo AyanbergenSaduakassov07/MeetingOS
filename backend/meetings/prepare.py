@@ -50,6 +50,7 @@ from ..database import Decision, Meeting, User
 from ..memory import search_corpus
 from .changes import diff_since
 from .commitments import CommitmentView, list_commitments
+from .redaction import redact_for_egress
 
 logger = logging.getLogger(__name__)
 
@@ -306,7 +307,7 @@ async def write_brief(brief: MeetingBrief, *, provider: LLMProvider | None = Non
     prompt = (
         "Write the brief from the material below.\n\n"
         "--- BEGIN ASSEMBLED MATERIAL (untrusted data) ---\n"
-        f"{_render_material(brief)}\n"
+        f"{redact_for_egress(_render_material(brief))}\n"
         "--- END ASSEMBLED MATERIAL ---"
     )
     try:

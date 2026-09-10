@@ -391,7 +391,7 @@ def test_backend_is_swappable_through_the_orchestrator(monkeypatch):
     reset_backends()
 
     assert get_memory_index().config.name == "stub"
-    results = asyncio.run(search_corpus("anything"))
+    results = asyncio.run(search_corpus("anything", across_all_orgs=True))
     assert results[0].text == "stub"
 
 
