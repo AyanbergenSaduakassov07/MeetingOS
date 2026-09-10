@@ -161,6 +161,70 @@ export interface CommitmentList {
   overdue_count: number;
 }
 
+export interface ProviderInfo {
+  name: string;
+  role: string;
+  model: string | null;
+  endpoint_host: string | null;
+  is_cloud: boolean;
+  configured: boolean;
+  is_default: boolean;
+}
+export interface RuleInfo {
+  name: string;
+  category: string;
+  description: string;
+  enabled: boolean;
+}
+export interface RedactionInfo {
+  enabled: boolean;
+  source: string;
+  rules: RuleInfo[];
+  categories: string[];
+  limitations: string[];
+}
+export interface DataResidencyInfo {
+  data_dir: string;
+  database: string;
+  recordings_dir: string;
+  documents_dir: string;
+  single_tenant: boolean;
+  allowed_inference_hosts: string[];
+  notes: string[];
+}
+export interface AuditEntry {
+  id: string;
+  created_at: string | null;
+  provider: string;
+  model: string | null;
+  operation: string;
+  endpoint_host: string | null;
+  is_cloud: boolean;
+  characters_sent: number | null;
+  items_sent: number | null;
+  redaction_enabled: boolean;
+  redactions_applied: number;
+  succeeded: boolean;
+  error: string | null;
+  meeting_id: string | null;
+}
+export interface AuditSummary {
+  total_calls: number;
+  cloud_calls: number;
+  local_calls: number;
+  failed_calls: number;
+  characters_sent: number;
+  calls_without_redaction: number;
+  distinct_hosts: string[];
+}
+export interface Privacy {
+  providers: ProviderInfo[];
+  redaction: RedactionInfo;
+  residency: DataResidencyInfo;
+  audit_summary: AuditSummary;
+  recent_calls: AuditEntry[];
+}
+
 export interface Citation {
   segment_id: string;
   start_ms: number;
@@ -225,6 +289,16 @@ export const api = {
   getTranscript: (id: string) => get<TranscriptSegment[]>(`/api/meetings/${id}/transcript`),
   audioUrl: (id: string) => `${BASE}/api/meetings/${id}/audio`,
   getDashboard: (periodDays = 90) => get<Dashboard>(`/api/dashboard?period_days=${periodDays}`),
+  getPrivacy: () => get<Privacy>('/api/privacy'),
+  async updateRedaction(enabled: boolean, rules: string[]): Promise<RedactionInfo> {
+    const response = await fetch(`${BASE}/api/privacy/redaction`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ enabled, rules }),
+    });
+    if (!response.ok) throw new ApiError(response.status, response.statusText);
+    return (await response.json()) as RedactionInfo;
+  },
   listCommitments: (params: Record<string, string> = {}) =>
     get<CommitmentList>(`/api/commitments?${new URLSearchParams(params)}`),
 

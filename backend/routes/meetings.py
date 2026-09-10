@@ -35,6 +35,7 @@ from ..database import (
     TranscriptSegment,
     get_db,
 )
+from ..meetings.board import ensure_board_template, is_board_meeting, polish_minutes, render_minutes, to_markdown
 from ..meetings.copilot import CopilotError, answer_question
 from ..meetings.ingestion import schedule_processing
 from ..meetings.prepare import assemble_brief, write_brief
@@ -562,6 +563,93 @@ class BriefOut(BaseModel):
 
 # Registered before the "/{meeting_id}" routes: "prepare" is a literal path
 # segment, and a parameterised route declared first would swallow it.
+class MinuteLineOut(BaseModel):
+    """One minuted line, with the citation behind it."""
+
+    text: str
+    detail: str | None = None
+    evidence_id: str | None = None
+    start_ms: int | None = None
+    verification_status: str | None = None
+
+
+class MinuteSectionOut(BaseModel):
+    heading: str
+    lines: list[MinuteLineOut] = []
+
+
+class MinutesOut(BaseModel):
+    """Board minutes assembled from extracted items."""
+
+    meeting_id: str
+    meeting_title: str
+    meeting_date: str | None = None
+    is_board_meeting: bool = False
+    sections: list[MinuteSectionOut] = []
+    # Extracted but untraceable to a transcript segment. Kept separate so a
+    # reader can tell what is backed by the recording and what is not.
+    uncited: list[MinuteLineOut] = []
+    line_count: int = 0
+    cited_line_count: int = 0
+    notes: list[str] = []
+    markdown: str = ""
+    summary: str | None = None
+
+
+@router.post("/{meeting_id}/minutes", response_model=MinutesOut)
+async def generate_minutes(
+    meeting_id: str,
+    summarise: bool = Query(False, description="Also generate a prose summary."),
+    db: Session = Depends(get_db),
+) -> MinutesOut:
+    """Assemble board minutes from this meeting's extracted items.
+
+    Deterministic: every line is an existing row carried through with its
+    Evidence id. ``summarise=true`` adds a paragraph generated *from* the
+    assembled document, which cannot add a resolution nobody passed.
+    """
+    meeting = db.query(Meeting).filter(Meeting.id == meeting_id).first()
+    if meeting is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Meeting {meeting_id} not found")
+
+    minutes = render_minutes(db, meeting_id)
+    if summarise:
+        minutes.polished = await polish_minutes(minutes)
+
+    def line(entry) -> MinuteLineOut:
+        return MinuteLineOut(
+            text=entry.text,
+            detail=entry.detail,
+            evidence_id=entry.evidence_id,
+            start_ms=entry.start_ms,
+            verification_status=entry.verification_status,
+        )
+
+    return MinutesOut(
+        meeting_id=meeting_id,
+        meeting_title=minutes.meeting_title,
+        meeting_date=minutes.meeting_date,
+        is_board_meeting=is_board_meeting(db, meeting),
+        sections=[
+            MinuteSectionOut(heading=s.heading, lines=[line(entry) for entry in s.lines]) for s in minutes.sections
+        ],
+        uncited=[line(entry) for entry in minutes.uncited],
+        line_count=minutes.line_count,
+        cited_line_count=minutes.cited_line_count,
+        notes=minutes.notes,
+        markdown=to_markdown(minutes),
+        summary=minutes.polished,
+    )
+
+
+@router.post("/templates/board", status_code=status.HTTP_201_CREATED)
+async def create_board_template(org_id: str | None = Query(None), db: Session = Depends(get_db)) -> dict:
+    """Ensure the board template exists for this org. Idempotent."""
+    organization = _resolve_org(db, org_id)
+    template = ensure_board_template(db, organization.id)
+    return {"id": template.id, "name": template.name, "org_id": template.org_id}
+
+
 @router.post("/prepare", response_model=BriefOut)
 async def prepare_meeting(payload: PrepareRequest, db: Session = Depends(get_db)) -> BriefOut:
     """Assemble a preparation brief for an upcoming meeting.

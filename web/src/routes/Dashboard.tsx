@@ -50,9 +50,7 @@ export function Dashboard() {
   return (
     <div className="mx-auto max-w-6xl px-6 py-8" data-testid="dashboard">
       <header>
-        <h1 className="font-display text-3xl font-black tracking-tight">
-          {t('dashboard.title')}
-        </h1>
+        <h1 className="font-display text-3xl font-black tracking-tight">{t('dashboard.title')}</h1>
         <p className="mt-1 text-sm text-muted-foreground">
           {t('dashboard.period', { days: data.period_days, meetings: data.meetings_in_period })}
         </p>

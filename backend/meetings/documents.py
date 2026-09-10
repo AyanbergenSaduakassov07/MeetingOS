@@ -33,9 +33,10 @@ Privacy
 -------
 Documents skew far more sensitive than meetings: contracts, financials, board
 packs. ``redact_for_egress`` is applied on the same opt-in flag as transcripts,
-and ``Document.is_sensitive`` marks the ones an operator has flagged. Neither
-is a substitute for a decision about whether this class of file should reach a
-third-party API at all — see the report accompanying this change.
+and ``Document.is_sensitive`` overrides that flag for one file: a document
+marked sensitive is redacted as it is indexed, so every downstream cloud call
+reads the redacted copy. Neither is a substitute for a decision about whether
+this class of file should reach a third-party API at all.
 """
 
 from __future__ import annotations

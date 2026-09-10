@@ -7,6 +7,7 @@ import { Commitments } from './routes/Commitments';
 import { Dashboard } from './routes/Dashboard';
 import { MeetingDetail } from './routes/MeetingDetail';
 import { MeetingsList } from './routes/MeetingsList';
+import { PrivacySettings } from './routes/PrivacySettings';
 
 export default function App() {
   const { t } = useTranslation();
@@ -34,6 +35,7 @@ export default function App() {
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/commitments" element={<Commitments />} />
+            <Route path="/settings/privacy" element={<PrivacySettings />} />
             <Route path="/meetings" element={<MeetingsList />} />
             <Route path="/meetings/:meetingId" element={<MeetingDetail />} />
           </Routes>

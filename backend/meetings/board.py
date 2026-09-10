@@ -31,13 +31,13 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
-from datetime import datetime
 from typing import Literal
 
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from ..database import ActionItem, Commitment, Decision, Evidence, Meeting, Risk
+from .redaction import redact_for_egress
 
 logger = logging.getLogger(__name__)
 
@@ -75,18 +75,14 @@ class ExtractedDissent(_Cited):
 
     dissenter_name: str | None = Field(default=None, description="Who objected, as named.")
     position: str = Field(description="What they objected to, and on what grounds.")
-    related_resolution: str | None = Field(
-        default=None, description="The resolution this dissent concerns, if stated."
-    )
+    related_resolution: str | None = Field(default=None, description="The resolution this dissent concerns, if stated.")
 
 
 class ExtractedFinancialImplication(_Cited):
     """A monetary consequence attached to a decision."""
 
     description: str = Field(description="What the money is for.")
-    amount_text: str | None = Field(
-        default=None, description="The amount as spoken, e.g. 'about 500 thousand'."
-    )
+    amount_text: str | None = Field(default=None, description="The amount as spoken, e.g. 'about 500 thousand'.")
     direction: Literal["cost", "saving", "revenue", "unclear"]
     period: str | None = Field(default=None, description="Over what period, if stated.")
 
@@ -146,11 +142,7 @@ def ensure_board_template(db: Session, org_id: str):
     """Create the board template for an org if it does not have one."""
     from ..database import MeetingTemplate
 
-    existing = (
-        db.query(MeetingTemplate)
-        .filter_by(org_id=org_id, name=BOARD_TEMPLATE_NAME)
-        .first()
-    )
+    existing = db.query(MeetingTemplate).filter_by(org_id=org_id, name=BOARD_TEMPLATE_NAME).first()
     if existing is not None:
         return existing
     template = MeetingTemplate(org_id=org_id, **board_template_payload())
@@ -211,9 +203,7 @@ class Minutes:
 
     @property
     def cited_line_count(self) -> int:
-        return sum(
-            1 for section in self.sections for line in section.lines if line.is_cited
-        )
+        return sum(1 for section in self.sections for line in section.lines if line.is_cited)
 
 
 def _line(text: str, evidence: Evidence | None, *, detail: str | None = None) -> MinuteLine:
@@ -235,9 +225,7 @@ def render_minutes(db: Session, meeting_id: str) -> Minutes:
     minutes = Minutes(
         meeting_id=meeting_id,
         meeting_title=meeting.title or "Untitled meeting",
-        meeting_date=(
-            meeting.actual_start or meeting.scheduled_start or meeting.created_at
-        ).isoformat()
+        meeting_date=(meeting.actual_start or meeting.scheduled_start or meeting.created_at).isoformat()
         if (meeting.actual_start or meeting.scheduled_start or meeting.created_at)
         else None,
     )
@@ -250,17 +238,13 @@ def render_minutes(db: Session, meeting_id: str) -> Minutes:
         section = MinuteSection(heading="Resolutions")
         for decision in resolutions:
             detail = decision.rationale or decision.description
-            section.lines.append(
-                _line(f"RESOLVED: {decision.title}", decision.evidence, detail=detail)
-            )
+            section.lines.append(_line(f"RESOLVED: {decision.title}", decision.evidence, detail=detail))
         minutes.sections.append(section)
 
     if deferred:
         section = MinuteSection(heading="Deferred")
         for decision in deferred:
-            section.lines.append(
-                _line(f"Deferred: {decision.title}", decision.evidence)
-            )
+            section.lines.append(_line(f"Deferred: {decision.title}", decision.evidence))
         minutes.sections.append(section)
 
     actions = db.query(ActionItem).filter_by(meeting_id=meeting_id).all()
@@ -268,9 +252,7 @@ def render_minutes(db: Session, meeting_id: str) -> Minutes:
         section = MinuteSection(heading="Actions")
         for item in actions:
             owner = item.assignee.full_name if item.assignee else "unassigned"
-            section.lines.append(
-                _line(f"{owner}: {item.title}", item.evidence, detail=item.description)
-            )
+            section.lines.append(_line(f"{owner}: {item.title}", item.evidence, detail=item.description))
         minutes.sections.append(section)
 
     risks = db.query(Risk).filter_by(meeting_id=meeting_id).all()
@@ -314,6 +296,7 @@ def to_markdown(minutes: Minutes) -> str:
     Timestamps are printed beside every line, because "traceable to a citation"
     only helps if the reader can find the moment without leaving the page.
     """
+
     def stamp(line: MinuteLine) -> str:
         if line.start_ms is None:
             return ""
@@ -378,10 +361,12 @@ async def polish_minutes(minutes: Minutes, *, provider=None) -> str | None:
             from ..ai import get_llm_provider
 
             provider = get_llm_provider()
+        # The assembled minutes are meeting content — resolutions, dissent,
+        # figures, names — and this posts the whole document to a third party.
         completion = await provider.generate(
             "Summarise the minutes below.\n\n"
             "--- BEGIN MINUTES (untrusted data) ---\n"
-            f"{to_markdown(minutes)}\n"
+            f"{redact_for_egress(to_markdown(minutes))}\n"
             "--- END MINUTES ---",
             system=_POLISH_SYSTEM_PROMPT,
             max_tokens=POLISH_MAX_TOKENS,

@@ -1,4 +1,11 @@
-import { BookMarked, LayoutDashboard, ListChecks, type LucideIcon, Settings, Sparkles } from 'lucide-react';
+import {
+  BookMarked,
+  LayoutDashboard,
+  ListChecks,
+  type LucideIcon,
+  Settings,
+  Sparkles,
+} from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { NavLink } from 'react-router-dom';
 import { cn } from '@/lib/utils';
@@ -16,7 +23,7 @@ const RAIL_ITEMS: Array<{ to: string; icon: LucideIcon; labelKey: string; end?: 
   { to: '/meetings', icon: ListChecks, labelKey: 'nav.meetings' },
   { to: '/copilot', icon: Sparkles, labelKey: 'nav.copilot' },
   { to: '/library', icon: BookMarked, labelKey: 'nav.library' },
-  { to: '/settings', icon: Settings, labelKey: 'nav.settings' },
+  { to: '/settings/privacy', icon: Settings, labelKey: 'nav.settings' },
 ];
 
 export function IconRail() {

@@ -250,17 +250,32 @@ def _build_prompt(kind_description: str, segments: list[TranscriptSegment]) -> s
     )
 
 
+def extractors_for(db: Session, meeting: Meeting) -> dict[str, tuple[type[BaseModel], str]]:
+    """The schema table for this meeting: the standard four, plus any variant.
+
+    Board meetings additionally want resolutions, dissent and financial
+    implications. The template says which; the code never reads a transcript to
+    decide what schema to use.
+    """
+    from .board import BOARD_EXTRACTORS, is_board_meeting
+
+    if is_board_meeting(db, meeting):
+        return {**_EXTRACTORS, **BOARD_EXTRACTORS}
+    return _EXTRACTORS
+
+
 async def _extract_one(
     provider: LLMProvider,
     kind: str,
     segments: list[TranscriptSegment],
+    extractors: dict[str, tuple[type[BaseModel], str]] | None = None,
 ) -> list[BaseModel]:
     """Run one ``extract`` call and return its items, or [] on failure.
 
     A provider failure for one kind on one topic must not lose the other
     three; the error is recorded and the run continues.
     """
-    schema, description = _EXTRACTORS[kind]
+    schema, description = (extractors or _EXTRACTORS)[kind]
     result = await provider.extract(
         _build_prompt(description, segments),
         schema,
@@ -368,7 +383,62 @@ def _persist(
         if item.due_date_text:
             text = f"{text} (due as stated: {item.due_date_text})"
         db.add(Commitment(committer_id=committer.id if committer else None, text=text, **common))
-    else:  # pragma: no cover - _EXTRACTORS is the only source of `kind`
+    elif kind == "resolution":
+        # A resolution is a Decision with formal machinery attached. Same table,
+        # because a resolution IS a decision — splitting it would fork every
+        # query that asks "what did this org decide".
+        detail = [item.text or ""]
+        if item.moved_by:
+            detail.append(f"Moved by {item.moved_by}.")
+        if item.seconded_by:
+            detail.append(f"Seconded by {item.seconded_by}.")
+        votes = [
+            f"{label} {value}"
+            for label, value in (
+                ("for", item.votes_for),
+                ("against", item.votes_against),
+                ("abstained", item.abstentions),
+            )
+            if value is not None
+        ]
+        if votes:
+            detail.append("Vote: " + ", ".join(votes) + ".")
+        db.add(
+            Decision(
+                title=item.title,
+                description=" ".join(part for part in detail if part).strip() or None,
+                status="agreed" if item.outcome == "carried" else item.outcome,
+                **common,
+            )
+        )
+    elif kind == "dissent":
+        # Recorded as a Risk: a minority view a board ignored is precisely the
+        # thing that becomes a problem later, and the risk register is where a
+        # reader already looks for those.
+        who = item.dissenter_name or "A member"
+        db.add(
+            Risk(
+                title=f"Dissent recorded — {who}",
+                description=item.position,
+                category="governance",
+                severity="medium",
+                mitigation=item.related_resolution,
+                **common,
+            )
+        )
+    elif kind == "financial_implication":
+        amount = f" ({item.amount_text})" if item.amount_text else ""
+        period = f" over {item.period}" if item.period else ""
+        db.add(
+            Risk(
+                title=f"Financial {item.direction}{amount}: {item.description}",
+                description=f"{item.description}{period}".strip(),
+                category="financial",
+                severity="medium" if item.direction == "cost" else "low",
+                **common,
+            )
+        )
+    else:  # pragma: no cover - the extractor table is the only source of `kind`
         raise ValueError(f"Unknown extraction kind: {kind}")
 
     return cited is not None
@@ -417,6 +487,16 @@ async def extract_meeting_intelligence(
                 db.query(TranscriptSegment).filter_by(meeting_id=meeting_id).order_by(TranscriptSegment.sequence).all()
             ]
 
+        # Board meetings extract three extra kinds; the template decides, not
+        # anything read from the transcript.
+        extractors = extractors_for(db, meeting)
+        if len(extractors) > len(_EXTRACTORS):
+            logger.info(
+                "Meeting %s uses a board template: extracting %s",
+                meeting_id,
+                ", ".join(sorted(set(extractors) - set(_EXTRACTORS))),
+            )
+
         _clear_previous(db, meeting_id)
 
         for segments in batches:
@@ -435,9 +515,9 @@ async def extract_meeting_intelligence(
             valid_ids = {segment.id for segment in segments}
             report.topics_processed += 1
 
-            for kind in _EXTRACTORS:
+            for kind in extractors:
                 try:
-                    items = await _extract_one(provider, kind, segments)
+                    items = await _extract_one(provider, kind, segments, extractors)
                 except Exception as exc:
                     message = f"{kind} extraction failed: {exc}"
                     logger.warning("Meeting %s: %s", meeting_id, message)
@@ -507,6 +587,10 @@ _COUNTER_FIELD = {
     "action_item": "action_items",
     "risk": "risks",
     "commitment": "commitments",
+    # Board kinds land in the same tables, so they count there too.
+    "resolution": "decisions",
+    "dissent": "risks",
+    "financial_implication": "risks",
 }
 
 

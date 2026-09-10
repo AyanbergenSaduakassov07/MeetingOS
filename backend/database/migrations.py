@@ -23,7 +23,7 @@ import uuid
 
 from sqlalchemy import inspect, text
 
-from .models import Base, DocumentChunk, Evidence, EvidenceCitation, MeetingDocument
+from .models import Base, DocumentChunk, Evidence, EvidenceCitation, MeetingDocument, ProviderCall
 
 logger = logging.getLogger(__name__)
 
@@ -46,6 +46,7 @@ def run_migrations(engine) -> None:
     _migrate_segment_embeddings(engine, inspector, tables)
     _migrate_evidence(engine, inspector, tables)
     _migrate_documents(engine, inspector, tables)
+    _migrate_provider_calls(engine, inspector, tables)
 
 
 # -- helpers ---------------------------------------------------------------
@@ -302,3 +303,10 @@ def _drop_legacy_citation_columns(engine) -> None:
 
     if dropped:
         logger.info("Dropped %d legacy citation column(s) superseded by Evidence", dropped)
+
+
+def _migrate_provider_calls(engine, inspector, tables: set[str]) -> None:
+    """Add the outbound-call audit log (v0.1.0)."""
+    if "provider_calls" not in inspector.get_table_names():
+        Base.metadata.create_all(engine, tables=[ProviderCall.__table__])
+        logger.info("Created provider_calls table")

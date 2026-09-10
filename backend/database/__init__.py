@@ -29,6 +29,7 @@ from .models import (
     MeetingTemplate,
     Organization,
     Priority,
+    ProviderCall,
     Risk,
     RiskSeverity,
     RiskStatus,
@@ -63,6 +64,7 @@ __all__ = [
     "Evidence",
     "EvidenceCitation",
     "MeetingDocument",
+    "ProviderCall",
     # Entities
     "Base",
     "Organization",

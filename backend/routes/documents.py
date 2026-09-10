@@ -103,9 +103,12 @@ async def upload_document(
 ) -> DocumentOut:
     """Upload a document, extract its text, chunk it, and index it.
 
-    ``is_sensitive`` marks contracts and financials for an operator's own
-    triage. It does not currently change what is sent to the model — that is a
-    deliberate gap, reported rather than papered over.
+    ``is_sensitive`` marks contracts and financials, and it now changes what
+    leaves the machine: a sensitive document is redacted before it is indexed,
+    whatever the org-wide redaction setting says, so no cloud call — embedding
+    or generation — ever receives its identifiers in the clear. Searching that
+    document for a redacted span stops working, which is the trade the flag is
+    asking for.
     """
     suffix = Path(file.filename or "").suffix.lower()
     if suffix not in ALLOWED_SUFFIXES:

@@ -278,11 +278,15 @@ async def get_dashboard(
         decisions_pending=decision_stat("Pending", PENDING, "warn"),
         decisions_reversed=decision_stat("Reversed", REVERSED, "destructive"),
         overdue_commitments=_toned(
-            "Overdue commitments", len(overdue), "destructive",
+            "Overdue commitments",
+            len(overdue),
+            "destructive",
             StatLink(path="/commitments", query={"overdue": "true"}),
         ),
         open_risks=_toned(
-            "Open risks", len(open_risks), "warn",
+            "Open risks",
+            len(open_risks),
+            "warn",
             StatLink(path="/risks", query={"period_days": str(period_days)}),
         ),
         top_risks=top_risks,

@@ -23,7 +23,12 @@ export function QualityIndicator({ quality }: { quality: ExtractionQuality }) {
     { key: 'verified', value: quality.verified, icon: CheckCircle2, tone: 'text-good' },
     { key: 'lowConfidence', value: quality.low_confidence, icon: AlertTriangle, tone: 'text-warn' },
     { key: 'unsupported', value: quality.unsupported, icon: ShieldAlert, tone: 'text-destructive' },
-    { key: 'unverified', value: quality.unverified, icon: CircleHelp, tone: 'text-muted-foreground' },
+    {
+      key: 'unverified',
+      value: quality.unverified,
+      icon: CircleHelp,
+      tone: 'text-muted-foreground',
+    },
   ];
 
   return (
@@ -48,9 +53,7 @@ export function QualityIndicator({ quality }: { quality: ExtractionQuality }) {
       ) : (
         <>
           <p className="mt-2 font-mono text-3xl font-bold tabular-nums">
-            {quality.verified_rate === null
-              ? '—'
-              : `${Math.round(quality.verified_rate * 100)}%`}
+            {quality.verified_rate === null ? '—' : `${Math.round(quality.verified_rate * 100)}%`}
             <span className="ml-2 font-sans text-sm font-normal text-muted-foreground">
               {t('quality.verifiedOf', { total: quality.total_items })}
             </span>
