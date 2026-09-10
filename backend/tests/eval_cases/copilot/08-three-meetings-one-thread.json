@@ -1,0 +1,55 @@
+{
+  "name": "three-meetings-one-thread",
+  "complexity": "cross_meeting",
+  "notes": "A decision, its reversal, and the reason, spread over three meetings.",
+  "meetings": [
+    {
+      "title": "January board",
+      "language": "en",
+      "records": [
+        {
+          "key": "orig",
+          "text": "We agreed to award the drilling contract to Kaspi Drilling.",
+          "verification_status": "verified",
+          "relevant": true
+        }
+      ]
+    },
+    {
+      "title": "February board",
+      "language": "en",
+      "records": [
+        {
+          "key": "reverse",
+          "text": "The Kaspi Drilling award is cancelled; we are not proceeding with them.",
+          "verification_status": "verified",
+          "relevant": true
+        }
+      ]
+    },
+    {
+      "title": "February audit",
+      "language": "en",
+      "records": [
+        {
+          "key": "reason",
+          "text": "Kaspi Drilling failed the safety audit, which is why the award was withdrawn.",
+          "verification_status": "verified",
+          "relevant": true
+        },
+        {
+          "key": "noise",
+          "text": "The audit team will refresh the template next quarter.",
+          "verification_status": "verified",
+          "relevant": false
+        }
+      ]
+    }
+  ],
+  "question": "What happened to the Kaspi Drilling contract and why?",
+  "expects_answer": true,
+  "must_cite": ["reverse", "reason"],
+  "must_contain_any": ["safety"],
+  "must_not_contain": [],
+  "min_meetings_spanned": 2
+}

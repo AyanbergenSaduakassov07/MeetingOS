@@ -1,0 +1,32 @@
+{
+  "name": "scanned-document-no-text",
+  "complexity": "refusal",
+  "notes": "A document exists but yielded no chunks. The corpus must not pretend to know its contents.",
+  "meetings": [
+    {
+      "title": "Legal sync",
+      "language": "en",
+      "records": [
+        {
+          "key": "mention",
+          "text": "The signed lease was uploaded as a scan; nobody has read the figures out yet.",
+          "verification_status": "verified",
+          "relevant": false
+        }
+      ]
+    }
+  ],
+  "documents": [
+    {
+      "title": "Signed lease (scan)",
+      "language": "en",
+      "chunks": []
+    }
+  ],
+  "question": "What is the monthly rent in the signed lease?",
+  "expects_answer": false,
+  "must_cite": [],
+  "must_contain_any": [],
+  "must_not_contain": ["the monthly rent is", "per month is"],
+  "must_span_kinds": []
+}

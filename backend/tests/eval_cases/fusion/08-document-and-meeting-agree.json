@@ -1,0 +1,38 @@
+{
+  "name": "document-and-meeting-agree",
+  "complexity": "fusion",
+  "notes": "Corroboration across kinds — both should be cited, not just the first retrieved.",
+  "meetings": [
+    {
+      "title": "Board meeting",
+      "language": "en",
+      "records": [
+        {
+          "key": "resolved",
+          "text": "Resolved: the audit committee will meet quarterly from this year.",
+          "verification_status": "verified",
+          "relevant": true
+        }
+      ]
+    }
+  ],
+  "documents": [
+    {
+      "title": "Audit committee charter",
+      "language": "en",
+      "chunks": [
+        {
+          "key": "charter",
+          "text": "Section 3. The audit committee shall convene not less than four times per calendar year.",
+          "relevant": true
+        }
+      ]
+    }
+  ],
+  "question": "How often does the audit committee meet?",
+  "expects_answer": true,
+  "must_cite": ["resolved", "charter"],
+  "must_contain_any": ["quarterly", "four"],
+  "must_not_contain": [],
+  "must_span_kinds": ["meeting", "document"]
+}

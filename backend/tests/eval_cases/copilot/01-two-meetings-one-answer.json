@@ -1,0 +1,49 @@
+{
+  "name": "two-meetings-one-answer",
+  "complexity": "cross_meeting",
+  "notes": "The budget figure is in one meeting, the approval in another. Answering needs both.",
+  "meetings": [
+    {
+      "title": "Aktau planning",
+      "language": "en",
+      "records": [
+        {
+          "key": "budget",
+          "text": "The Aktau expansion budget is set at 500,000 tenge for this quarter.",
+          "verification_status": "verified",
+          "relevant": true
+        },
+        {
+          "key": "canteen",
+          "text": "The canteen will move to the second floor in March.",
+          "verification_status": "verified",
+          "relevant": false
+        }
+      ]
+    },
+    {
+      "title": "Aktau approval",
+      "language": "en",
+      "records": [
+        {
+          "key": "approved",
+          "text": "The board approved the Aktau expansion at the figure the planning meeting set.",
+          "verification_status": "verified",
+          "relevant": true
+        },
+        {
+          "key": "parking",
+          "text": "Parking permits are still with the municipality.",
+          "verification_status": "verified",
+          "relevant": false
+        }
+      ]
+    }
+  ],
+  "question": "What is the approved budget for the Aktau expansion?",
+  "expects_answer": true,
+  "must_cite": ["budget", "approved"],
+  "must_contain_any": ["500,000", "500000", "500 000"],
+  "must_not_contain": [],
+  "min_meetings_spanned": 2
+}

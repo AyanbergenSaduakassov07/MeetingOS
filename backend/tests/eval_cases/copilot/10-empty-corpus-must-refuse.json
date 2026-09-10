@@ -1,0 +1,12 @@
+{
+  "name": "empty-corpus-must-refuse",
+  "complexity": "refusal",
+  "notes": "Nothing indexed at all. There is no honest answer other than saying so.",
+  "meetings": [],
+  "question": "What was decided about the pipeline inspection schedule?",
+  "expects_answer": false,
+  "must_cite": [],
+  "must_contain_any": [],
+  "must_not_contain": ["was decided", "the schedule is"],
+  "min_meetings_spanned": 0
+}

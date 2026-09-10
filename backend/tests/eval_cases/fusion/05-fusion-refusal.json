@@ -1,0 +1,38 @@
+{
+  "name": "fusion-refusal",
+  "complexity": "refusal",
+  "notes": "A document is indexed but does not cover the question. Having a document must not manufacture an answer.",
+  "meetings": [
+    {
+      "title": "Ops standup",
+      "language": "en",
+      "records": [
+        {
+          "key": "rota",
+          "text": "The maintenance rota for the Almaty depot is published weekly.",
+          "verification_status": "verified",
+          "relevant": false
+        }
+      ]
+    }
+  ],
+  "documents": [
+    {
+      "title": "Insurance schedule",
+      "language": "en",
+      "chunks": [
+        {
+          "key": "cover",
+          "text": "The public liability limit under this policy is 2,000,000 tenge per occurrence.",
+          "relevant": false
+        }
+      ]
+    }
+  ],
+  "question": "What is the notice period in the Zharkyn contract?",
+  "expects_answer": false,
+  "must_cite": [],
+  "must_contain_any": [],
+  "must_not_contain": ["2,000,000", "notice period is"],
+  "must_span_kinds": []
+}

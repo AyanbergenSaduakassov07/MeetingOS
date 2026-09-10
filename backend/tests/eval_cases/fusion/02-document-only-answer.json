@@ -1,0 +1,38 @@
+{
+  "name": "document-only-answer",
+  "complexity": "fusion",
+  "notes": "No meeting covers it. Citing the document alone is correct.",
+  "meetings": [
+    {
+      "title": "Ops standup",
+      "language": "en",
+      "records": [
+        {
+          "key": "noise",
+          "text": "Badge readers at gate three were replaced on Tuesday.",
+          "verification_status": "verified",
+          "relevant": false
+        }
+      ]
+    }
+  ],
+  "documents": [
+    {
+      "title": "Insurance schedule",
+      "language": "en",
+      "chunks": [
+        {
+          "key": "cover",
+          "text": "The public liability limit under this policy is 2,000,000 tenge per occurrence.",
+          "relevant": true
+        }
+      ]
+    }
+  ],
+  "question": "What is the public liability limit on our policy?",
+  "expects_answer": true,
+  "must_cite": ["cover"],
+  "must_contain_any": ["2,000,000", "2000000", "2 000 000"],
+  "must_not_contain": [],
+  "must_span_kinds": ["document"]
+}

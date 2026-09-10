@@ -255,6 +255,248 @@ async def run_crosslingual_suite(*, embedder=None, verbose: bool = False) -> dic
     }
 
 
+COPILOT_DIR = CASES_DIR / "copilot"
+FUSION_DIR = CASES_DIR / "fusion"
+
+
+def _corpus_metrics(rows: list[dict]) -> dict:
+    """Precision and recall over citations, plus the behaviours that gate them.
+
+    Citations are scored as a retrieval problem because that is what they are:
+    of the records the answer cited, how many were the ones that actually
+    answer the question (precision), and of the records that do, how many were
+    cited (recall). Both are computed over the pooled record set rather than
+    averaged per case, so a case citing ten records cannot be outvoted by one
+    citing a single record.
+
+    Answered and refused cases are separated everywhere. A model that refuses
+    everything scores perfect precision on citations it never made, and one
+    that answers everything scores perfect recall on questions it should have
+    declined. Neither number means anything without the other two below it.
+    """
+    # Cases that never reached the model are excluded from every quality number
+    # and reported as coverage instead. Scoring them folded a rate limit into
+    # "citation precision 0.00", which does not read as "not measured" — it
+    # reads as "the copilot cites nothing", and that is a false statement about
+    # the product dressed up as a metric.
+    scored = [r for r in rows if not r["error"]]
+    answered = [r for r in scored if r["expects_answer"]]
+    refusals = [r for r in scored if not r["expects_answer"]]
+
+    cited = sum(len(r["cited_keys"]) for r in answered)
+    correct = sum(len(set(r["cited_keys"]) & set(r["relevant_keys"])) for r in answered)
+    wanted = sum(len(r["must_cite"]) for r in answered)
+    found = sum(len(set(r["cited_keys"]) & set(r["must_cite"])) for r in answered)
+
+    grounded = [r for r in answered if r["must_contain_any"]]
+    return {
+        "cases": len(rows),
+        "scored": len(scored),
+        "coverage": round(len(scored) / len(rows), 4) if rows else 0.0,
+        "answerable": len(answered),
+        "unanswerable": len(refusals),
+        "citation_precision": round(correct / cited, 4) if cited else 0.0,
+        "citation_recall": round(found / wanted, 4) if wanted else 1.0,
+        "answer_accuracy": round(sum(1 for r in grounded if r["contains_required"]) / len(grounded), 4)
+        if grounded
+        else 1.0,
+        "refusal_accuracy": round(sum(1 for r in refusals if r["refused"]) / len(refusals), 4) if refusals else 1.0,
+        "false_answer_rate": round(sum(1 for r in refusals if not r["refused"]) / len(refusals), 4)
+        if refusals
+        else 0.0,
+        "span_accuracy": round(sum(1 for r in answered if r["spanned_ok"]) / len(answered), 4) if answered else 1.0,
+        "injection_failures": [r["name"] for r in scored if r["forbidden_hits"]],
+        "errors": [f"{r['name']}: {r['error']}" for r in rows if r["error"]],
+        "rows": rows,
+    }
+
+
+async def run_corpus_suite(
+    directory,
+    *,
+    provider=None,
+    embedder=None,
+    mode: str = "hybrid",
+    verbose: bool = False,
+) -> dict:
+    """Score org-wide copilot answers over a corpus built from each case.
+
+    Serves both the cross-meeting suite and the document-fusion suite: a fusion
+    case is a cross-meeting case that also carries ``documents``, and the code
+    that builds, indexes and scores them is identical. Keeping one runner means
+    a scoring change cannot silently apply to one suite and not the other.
+
+    Each case gets its own throwaway database *and* its own org. Sharing either
+    would let one case's records answer another case's question, which would
+    turn a retrieval failure into a pass.
+    """
+    import json as _json
+    import tempfile as _tempfile
+    import uuid as _uuid
+
+    from backend import config as _config
+    from backend.database import (
+        Document,
+        DocumentChunk,
+        Evidence,
+        Meeting,
+        Organization,
+        TranscriptSegment,
+        init_db,
+        new_session,
+    )
+    from backend.memory import index_document, index_meeting, reset_backends
+    from backend.memory.org_copilot import ask_corpus
+
+    cases = [_json.loads(p.read_text()) for p in sorted(directory.glob("*.json"))]
+    if not cases:
+        return {"cases": 0}
+
+    if provider is None:
+        from backend.ai import get_llm_provider
+
+        provider = get_llm_provider()
+
+    _config.set_data_dir(Path(_tempfile.mkdtemp(prefix=f"meetingos-{directory.name}-")))
+    init_db()
+    reset_backends()
+
+    rows = []
+    for case in cases:
+        db = new_session()
+        try:
+            org = Organization(name=case["name"], slug=f"{directory.name}-{_uuid.uuid4().hex[:8]}")
+            db.add(org)
+            db.flush()
+
+            # record_id -> case key, so scoring never depends on generated ids.
+            key_of: dict[str, str] = {}
+            kind_of: dict[str, str] = {}
+            relevant: set[str] = set()
+
+            for meeting_case in case.get("meetings", []):
+                meeting = Meeting(
+                    org_id=org.id,
+                    title=meeting_case["title"],
+                    status="completed",
+                    source="upload",
+                    language=meeting_case.get("language", "en"),
+                )
+                db.add(meeting)
+                db.flush()
+                for index, record in enumerate(meeting_case["records"]):
+                    segment = TranscriptSegment(
+                        meeting_id=meeting.id,
+                        sequence=index,
+                        start_ms=index * 10000,
+                        end_ms=(index + 1) * 10000,
+                        text=record["text"],
+                        language=meeting_case.get("language", "en"),
+                    )
+                    db.add(segment)
+                    db.flush()
+                    evidence = Evidence(
+                        org_id=org.id,
+                        meeting_id=meeting.id,
+                        claim_text=record["text"],
+                        quote=record["text"],
+                        verification_status=record.get("verification_status", "verified"),
+                    )
+                    evidence.cite(segment)
+                    db.add(evidence)
+                    db.flush()
+                    key_of[evidence.id] = record["key"]
+                    kind_of[record["key"]] = "meeting"
+                    if record.get("relevant"):
+                        relevant.add(record["key"])
+                db.commit()
+                await index_meeting(meeting.id, embedder=embedder, db=db)
+
+            for document_case in case.get("documents", []):
+                document = Document(
+                    org_id=org.id,
+                    title=document_case["title"],
+                    storage_path=f"eval/{_uuid.uuid4().hex}.pdf",
+                    language=document_case.get("language", "en"),
+                )
+                db.add(document)
+                db.flush()
+                for ordinal, chunk_case in enumerate(document_case["chunks"]):
+                    chunk = DocumentChunk(
+                        org_id=org.id,
+                        document_id=document.id,
+                        ordinal=ordinal,
+                        page=1,
+                        text=chunk_case["text"],
+                        language=document_case.get("language", "en"),
+                    )
+                    db.add(chunk)
+                    db.flush()
+                    key_of[chunk.id] = chunk_case["key"]
+                    kind_of[chunk_case["key"]] = "document"
+                    if chunk_case.get("relevant"):
+                        relevant.add(chunk_case["key"])
+                db.commit()
+                await index_document(document.id, embedder=embedder, db=db)
+
+            error = None
+            try:
+                answer = await ask_corpus(
+                    case["question"],
+                    org_id=org.id,
+                    provider=provider,
+                    embedder=embedder,
+                    db=db,
+                )
+                cited_keys = [key_of[c.record_id] for c in answer.citations if c.record_id in key_of]
+                unknown = [c.record_id for c in answer.citations if c.record_id not in key_of]
+                answer_text = answer.answer or ""
+                refused = answer.not_discussed
+                spanned = {kind_of.get(k) for k in cited_keys}
+            except Exception as exc:
+                error = f"{type(exc).__name__}: {exc}"
+                cited_keys, unknown, answer_text, refused, spanned = [], [], "", False, set()
+
+            lowered = answer_text.lower()
+            forbidden = [p for p in case.get("must_not_contain", []) if p.lower() in lowered]
+            wanted_any = case.get("must_contain_any", [])
+            contains = (not wanted_any) or any(p.lower() in lowered for p in wanted_any)
+
+            required_kinds = set(case.get("must_span_kinds", []))
+            if not required_kinds and case.get("min_meetings_spanned", 0) > 1:
+                spanned_ok = len({k for k in cited_keys}) >= case["min_meetings_spanned"]
+            else:
+                spanned_ok = required_kinds <= spanned if required_kinds else True
+
+            rows.append(
+                {
+                    "name": case["name"],
+                    "complexity": case.get("complexity", "unknown"),
+                    "expects_answer": case["expects_answer"],
+                    "must_cite": case.get("must_cite", []),
+                    "relevant_keys": sorted(relevant),
+                    "cited_keys": cited_keys,
+                    "unknown_citations": unknown,
+                    "refused": refused,
+                    "contains_required": contains and not refused if case["expects_answer"] else True,
+                    "must_contain_any": wanted_any,
+                    "spanned_ok": spanned_ok,
+                    "forbidden_hits": forbidden,
+                    "answer": answer_text[:400],
+                    "error": error,
+                }
+            )
+            if verbose:
+                verdict = "REFUSED" if refused else f"cited {cited_keys}"
+                print(f"    {case['name']:<38} {verdict}")
+                if forbidden:
+                    print(f"      !! forbidden text in answer: {forbidden}")
+        finally:
+            db.close()
+
+    return _corpus_metrics(rows)
+
+
 async def run_comparator_suite(*, provider=None, verbose: bool = False) -> dict:
     """Score the claim comparator against its hand-built cases.
 
@@ -511,6 +753,11 @@ def aggregate(results: list[CaseResult]) -> dict:
     """Overall and per-stratum metrics."""
 
     def metrics(subset: list[CaseResult]) -> dict:
+        # Same rule as the corpus suites: a case that never reached the model
+        # is missing data, not a recall of zero. Scoring 429s as misses turned
+        # an exhausted rate limit into "extraction finds nothing", which is a
+        # false statement about the pipeline printed as a metric.
+        scored_count, subset = len(subset), [case for case in subset if not case.error]
         total = KindScore()
         for case in subset:
             case_total = case.totals
@@ -525,15 +772,18 @@ def aggregate(results: list[CaseResult]) -> dict:
             "recall": round(total.recall, 4),
             "citation_accuracy": round(total.citation_accuracy, 4),
             "honesty": round(honesty, 4),
-            "cases": len(subset),
+            "cases": scored_count,
+            "scored": len(subset),
+            "coverage": round(len(subset) / scored_count, 4) if scored_count else 0.0,
             "expected_items": total.expected,
             "extracted_items": total.extracted,
         }
 
     per_kind = {}
+    clean = [case for case in results if not case.error]
     for kind in KINDS:
         total = KindScore()
-        for case in results:
+        for case in clean:
             score = case.scores.get(kind)
             if score is None:
                 continue
@@ -581,6 +831,11 @@ def report(summary: dict, results: list[CaseResult]) -> None:
         f"{overall['precision']:>7.2f}{overall['recall']:>7.2f}{overall['citation_accuracy']:>7.2f}"
     )
     print(f"\nhonesty (cases expecting nothing that returned nothing): {overall['honesty']:.2f}")
+    if overall["scored"] < overall["cases"]:
+        print(
+            f"\nPARTIAL — {overall['scored']} of {overall['cases']} case(s) reached the model. "
+            "Every number above covers only those; see ERRORS below."
+        )
 
     print("\nby complexity:")
     for stratum, metrics in summary["by_complexity"].items():
@@ -605,6 +860,82 @@ def report(summary: dict, results: list[CaseResult]) -> None:
         print("\nFORBIDDEN CONTENT (injection payload reached an extracted item):")
         for line in summary["forbidden_content"]:
             print(f"  {line}")
+
+
+def _report_corpus(label: str, summary: dict) -> None:
+    """Print one corpus suite's numbers, refusals kept beside the answers."""
+    if not summary.get("cases"):
+        print(f"  no {label} cases found")
+        return
+    if not summary.get("scored"):
+        print(
+            f"  NOT MEASURED — all {summary['cases']} case(s) failed before reaching the model.\n"
+            "  No score is reported: a provider failure is missing data, not a result."
+        )
+        for line in summary["errors"][:2]:
+            print(f"  ERROR {line[:150]}")
+        return
+    if summary["scored"] < summary["cases"]:
+        print(
+            f"  PARTIAL — {summary['scored']} of {summary['cases']} case(s) reached the model; "
+            "the numbers below cover only those."
+        )
+    print(
+        f"  citation precision {summary['citation_precision']:.2f}  "
+        f"citation recall {summary['citation_recall']:.2f}  "
+        f"answer accuracy {summary['answer_accuracy']:.2f}"
+    )
+    print(
+        f"  refusal accuracy   {summary['refusal_accuracy']:.2f}  "
+        f"false answers {summary['false_answer_rate']:.2f}  "
+        f"source-span accuracy {summary['span_accuracy']:.2f}"
+    )
+    print(
+        f"  ({summary['answerable']} answerable, {summary['unanswerable']} unanswerable, "
+        f"coverage {summary['coverage']:.2f} of {summary['cases']} case(s))"
+    )
+    if summary["injection_failures"]:
+        print(f"  INJECTION FAILURES: {summary['injection_failures']}")
+    for line in summary["errors"]:
+        print(f"  ERROR {line}")
+
+
+def _spread(runs: list[dict]) -> dict:
+    """Mean, min and max of each headline metric across repeated runs.
+
+    A single run of a non-deterministic model is a sample, not a measurement.
+    Two runs of this suite over identical inputs returned recall 0.38 and 0.92,
+    and extracted three risks one time and ten the next — so a threshold set
+    from one run either passes everything or fails everything, which is the
+    same failure `thresholds.json` already refuses to commit for a different
+    reason. Reporting the spread makes the variance visible instead of letting
+    whichever run happened to be last stand in for the model's behaviour.
+    """
+    metrics = ("precision", "recall", "citation_accuracy", "honesty")
+    out: dict[str, dict] = {"runs": len(runs)}
+    for metric in metrics:
+        values = [run["overall"][metric] for run in runs]
+        out[metric] = {
+            "mean": round(sum(values) / len(values), 4),
+            "min": round(min(values), 4),
+            "max": round(max(values), 4),
+            "values": [round(v, 4) for v in values],
+        }
+    return out
+
+
+def report_spread(spread: dict) -> None:
+    print("\n" + "=" * 74)
+    print(f"ACROSS {spread['runs']} RUNS")
+    print("=" * 74)
+    print(f"{'metric':<20}{'mean':>8}{'min':>8}{'max':>8}   values")
+    for metric in ("precision", "recall", "citation_accuracy", "honesty"):
+        row = spread[metric]
+        values = " ".join(f"{v:.2f}" for v in row["values"])
+        print(f"{metric:<20}{row['mean']:>8.2f}{row['min']:>8.2f}{row['max']:>8.2f}   {values}")
+        band = row["max"] - row["min"]
+        if band >= 0.25:
+            print(f"{'':20}   ^ spread of {band:.2f} — one run of this is not a measurement")
 
 
 def check_thresholds(summary: dict) -> tuple[bool, list[str]]:
@@ -636,18 +967,28 @@ def check_thresholds(summary: dict) -> tuple[bool, list[str]]:
 
 
 def write_baseline(summary: dict, provider_name: str) -> None:
+    worst = summary.get("spread")
+
     def floors(metrics: dict) -> dict:
         return {
-            metric: round(max(0.0, metrics[metric] - REGRESSION_MARGIN), 4)
+            metric: round(
+                max(0.0, (worst[metric]["min"] if worst and metric in worst else metrics[metric]) - REGRESSION_MARGIN),
+                4,
+            )
             for metric in ("precision", "recall", "citation_accuracy", "honesty")
         }
 
+    observed = summary.get("spread")
     payload = {
         "_comment": (
-            "Written by --baseline from an observed run, minus a "
-            f"{REGRESSION_MARGIN} margin for model non-determinism. Regenerate when the "
-            "provider, model, or case set changes."
+            "Written by --baseline from observed runs, minus a "
+            f"{REGRESSION_MARGIN} margin for model non-determinism. Where several runs "
+            "were made, the floor is taken from the WORST run, not the mean: CI should "
+            "fail on a regression, and a mean hides the run that already regressed. "
+            "Regenerate when the provider, model, or case set changes."
         ),
+        "runs": observed["runs"] if observed else 1,
+        "spread": observed,
         "recorded_at": datetime.now(UTC).isoformat(),
         "provider": provider_name,
         "observed": summary["overall"],
@@ -692,22 +1033,41 @@ async def main_async(args: argparse.Namespace) -> int:
             return 2
         embedder = get_embedding_provider()
 
+    if args.embedder == "stub" and not args.stub:
+        # A real LLM paired with the local embedder. This is the only way to
+        # score a provider that generates but does not embed (OpenRouter), and
+        # it splits the result cleanly: extraction and answering are real, the
+        # similarity matching behind them is not. Printed so no reader has to
+        # infer it from the flags.
+        from backend.eval.stub_provider import StubEmbedder
+
+        embedder = StubEmbedder()
+        provider_name = f"{provider_name} (embeddings: stub)"
+
     cases = load_cases(args.case)
     print(f"Running {len(cases)} case(s) against {provider_name}")
 
-    results = []
-    for case in cases:
-        if args.verbose:
-            print(f"\n  {case['name']}: {case.get('notes', '')}")
-        results.append(await run_case(case, provider=provider, embedder=embedder, verbose=args.verbose))
+    repeats = max(1, args.repeat)
+    every_run: list[dict] = []
+    for attempt in range(repeats):
+        if repeats > 1:
+            print(f"\n--- run {attempt + 1} of {repeats} ---")
+        results = []
+        for case in cases:
+            if args.verbose:
+                print(f"\n  {case['name']}: {case.get('notes', '')}")
+            results.append(await run_case(case, provider=provider, embedder=embedder, verbose=args.verbose))
 
-    summary = aggregate(results)
-    summary["provider"] = provider_name
-    report(summary, results)
+        summary = aggregate(results)
+        summary["provider"] = provider_name
+        report(summary, results)
+        every_run.append(summary)
 
-    if args.json:
-        Path(args.json).write_text(json.dumps(summary, indent=2) + "\n")
-        print(f"\nWrote {args.json}")
+    if repeats > 1:
+        summary = every_run[-1]
+        summary["spread"] = _spread(every_run)
+        summary["runs"] = every_run
+        report_spread(summary["spread"])
 
     if args.comparator:
         print("\ncomparator suite")
@@ -726,8 +1086,17 @@ async def main_async(args: argparse.Namespace) -> int:
 
     if args.crosslingual:
         print("\ncross-language retrieval")
-        xl = await run_crosslingual_suite(embedder=embedder if args.stub else None, verbose=args.verbose)
-        summary["crosslingual"] = xl
+        if args.stub or args.embedder == "stub":
+            print(
+                "  SKIPPED — cross-language retrieval is a property of the embedding\n"
+                "  model. Scoring it against a bag-of-words stub measures the stub.\n"
+                "  Run with a real embeddings provider to get a number here."
+            )
+            summary["crosslingual"] = {"cases": 0, "skipped": "no real embedding provider"}
+            xl = {}
+        else:
+            xl = await run_crosslingual_suite(embedder=None, verbose=args.verbose)
+            summary["crosslingual"] = xl
         if xl.get("cases"):
             print(f"  accuracy {xl['accuracy']:.2f} over {xl['cases']} case(s)")
             for pair, score in sorted(xl["by_language_pair"].items()):
@@ -735,7 +1104,52 @@ async def main_async(args: argparse.Namespace) -> int:
             if xl["missed"]:
                 print(f"  missed: {xl['missed']}")
 
+    for flag, label, directory in (
+        (args.copilot, "copilot", COPILOT_DIR),
+        (args.fusion, "fusion", FUSION_DIR),
+    ):
+        if not flag:
+            continue
+        print(f"\n{label} suite (cross-corpus answers)")
+        corpus_summary = await run_corpus_suite(
+            directory,
+            provider=provider,
+            embedder=embedder if args.stub or args.embedder == "stub" else None,
+            verbose=args.verbose,
+        )
+        summary[label] = corpus_summary
+        _report_corpus(label, corpus_summary)
+
+    if args.json:
+        # Written last. This used to run before the comparator, copilot, fusion
+        # and cross-language suites, so the saved summary was missing every one
+        # of them and only the terminal output ever had the full picture.
+        Path(args.json).write_text(json.dumps(summary, indent=2) + "\n")
+        print(f"\nWrote {args.json}")
+
     if args.baseline:
+        if args.stub:
+            # stub_provider.py says this in its own docstring; enforce it here
+            # rather than trusting the reader. A stub-derived thresholds.json is
+            # a CI gate calibrated against a keyword matcher, and it would pass
+            # forever while saying nothing about the model.
+            print(
+                "\nRefusing to write a baseline from the stub provider. It is a "
+                "keyword matcher, not a model; thresholds taken from it would gate "
+                "CI on nothing. Run --baseline against a real provider.",
+                file=sys.stderr,
+            )
+            return 2
+        if repeats < 3:
+            print(
+                "\nRefusing to write a baseline from "
+                f"{repeats} run(s). This suite returned recall 0.38 and 0.92 on "
+                "consecutive runs of the same model over the same cases, so a "
+                "threshold taken from one sample is noise with a decimal point. "
+                "Re-run with --repeat 3 or more.",
+                file=sys.stderr,
+            )
+            return 2
         write_baseline(summary, provider_name)
         return 0
 
@@ -769,13 +1183,43 @@ def main() -> int:
         ),
     )
     parser.add_argument("-v", "--verbose", action="store_true")
+    parser.add_argument(
+        "--repeat",
+        type=int,
+        default=1,
+        metavar="N",
+        help=(
+            "Run the extraction suite N times and report the spread. A single "
+            "run of a non-deterministic model is a sample, not a measurement; "
+            "use at least 3 before writing a baseline."
+        ),
+    )
     parser.add_argument("--comparator", action="store_true", help="also score the claim comparator suite")
+    parser.add_argument("--copilot", action="store_true", help="also score cross-meeting copilot answers")
+    parser.add_argument("--fusion", action="store_true", help="also score document+meeting fusion answers")
+    parser.add_argument(
+        "--all",
+        action="store_true",
+        help="run every suite: extraction, comparator, copilot, fusion, cross-language",
+    )
+    parser.add_argument(
+        "--embedder",
+        choices=("auto", "stub"),
+        default="auto",
+        help=(
+            "Matching and retrieval embeddings. 'stub' pairs a real LLM with the "
+            "deterministic local embedder, which is how a provider with no "
+            "embeddings endpoint (OpenRouter) is scored. Reported in the output."
+        ),
+    )
     parser.add_argument(
         "--crosslingual",
         action="store_true",
         help="also measure cross-language retrieval (RU/KZ query -> EN source, and back)",
     )
     args = parser.parse_args()
+    if args.all:
+        args.comparator = args.copilot = args.fusion = args.crosslingual = True
 
     logging.basicConfig(level=logging.WARNING, format="%(levelname)s %(name)s: %(message)s")
     return asyncio.run(main_async(args))

@@ -1,0 +1,43 @@
+{
+  "name": "contract-says-meeting-assumed",
+  "complexity": "fusion",
+  "notes": "The clause is only in the document; the assumption is only in the meeting. The answer needs both.",
+  "meetings": [
+    {
+      "title": "Vendor review",
+      "language": "en",
+      "records": [
+        {
+          "key": "assumed",
+          "text": "We assumed the Zharkyn contract gives us a 60-day termination notice.",
+          "verification_status": "verified",
+          "relevant": true
+        }
+      ]
+    }
+  ],
+  "documents": [
+    {
+      "title": "Zharkyn master agreement",
+      "language": "en",
+      "chunks": [
+        {
+          "key": "clause",
+          "text": "Clause 14.2. Either party may terminate this agreement on ninety (90) days written notice to the other party.",
+          "relevant": true
+        },
+        {
+          "key": "boiler",
+          "text": "Clause 22. This agreement is governed by the laws of the Republic of Kazakhstan.",
+          "relevant": false
+        }
+      ]
+    }
+  ],
+  "question": "Does the Zharkyn contract match what we assumed about the termination notice?",
+  "expects_answer": true,
+  "must_cite": ["assumed", "clause"],
+  "must_contain_any": ["90", "ninety"],
+  "must_not_contain": [],
+  "must_span_kinds": ["meeting", "document"]
+}

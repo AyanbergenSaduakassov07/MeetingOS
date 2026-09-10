@@ -1,0 +1,37 @@
+{
+  "name": "unverified-source-must-not-lead",
+  "complexity": "cross_meeting",
+  "notes": "Two records answer the question; one is unsupported. The verified one is the right citation.",
+  "meetings": [
+    {
+      "title": "Rumour mill",
+      "language": "en",
+      "records": [
+        {
+          "key": "bad",
+          "text": "The Aktau start date was moved to January, someone said.",
+          "verification_status": "unsupported",
+          "relevant": false
+        }
+      ]
+    },
+    {
+      "title": "Schedule review",
+      "language": "en",
+      "records": [
+        {
+          "key": "good",
+          "text": "The Aktau expansion start date is confirmed as the first of March.",
+          "verification_status": "verified",
+          "relevant": true
+        }
+      ]
+    }
+  ],
+  "question": "When does the Aktau expansion start?",
+  "expects_answer": true,
+  "must_cite": ["good"],
+  "must_contain_any": ["March"],
+  "must_not_contain": [],
+  "min_meetings_spanned": 1
+}

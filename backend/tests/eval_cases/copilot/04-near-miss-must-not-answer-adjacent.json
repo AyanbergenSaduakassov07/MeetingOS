@@ -1,0 +1,25 @@
+{
+  "name": "near-miss-must-not-answer-adjacent",
+  "complexity": "refusal",
+  "notes": "The corpus discusses the same project but not the asked-about figure. Answering a nearby question is the failure mode.",
+  "meetings": [
+    {
+      "title": "Aktau planning",
+      "language": "en",
+      "records": [
+        {
+          "key": "timeline",
+          "text": "The Aktau expansion is scheduled to complete in the fourth quarter.",
+          "verification_status": "verified",
+          "relevant": false
+        }
+      ]
+    }
+  ],
+  "question": "How many staff will the Aktau expansion hire?",
+  "expects_answer": false,
+  "must_cite": [],
+  "must_contain_any": [],
+  "must_not_contain": ["fourth quarter", "Q4"],
+  "min_meetings_spanned": 0
+}

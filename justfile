@@ -328,10 +328,27 @@ fix-python: _ensure-venv
 test: _ensure-venv
     {{ venv_bin }}/python -m pytest {{ backend_dir }}/tests -v
 
-# Score extraction (and, with --comparator, the claim comparator) against the
-# frozen eval cases. Needs provider credentials.
+# Score the frozen eval cases. Needs provider credentials.
+#
+#   just eval --all              every suite
+#   just eval --copilot          cross-meeting copilot answers only
+#   just eval --embedder stub    real LLM, local matcher — for a provider with
+#                                no embeddings endpoint (OpenRouter)
 eval *ARGS: _ensure-venv
     {{ venv_bin }}/python -m backend.eval.run_eval {{ ARGS }}
+
+# Regenerate backend/requirements.lock.txt from requirements.txt, with hashes.
+# Needs uv. Run this deliberately when a dependency changes, not on every build.
+lock:
+    uv pip compile backend/requirements.txt --generate-hashes \
+      --python {{ venv_bin }}/python -o backend/requirements.lock.txt
+
+# Prove the lock still installs and carries no known CVE. Hash mismatch, missing
+# transitive pin, or a published advisory all fail here.
+audit: _ensure-venv
+    {{ venv_bin }}/pip install --require-hashes -r backend/requirements.lock.txt --dry-run -q
+    {{ venv_bin }}/pip install -q pip-audit
+    {{ venv_bin }}/pip-audit -r backend/requirements.lock.txt --progress-spinner off
 
 # Eval as a CI gate: non-zero exit if precision/recall regress past threshold.
 # Refuses to give a verdict until `just eval --baseline` has run against a real
@@ -340,10 +357,11 @@ eval-ci: _ensure-venv
     {{ venv_bin }}/python -m backend.eval.run_eval --ci
 
 # Exercise the eval harness with a deterministic fake. Proves the scorer works;
-# says nothing about extraction quality. The cross-language suite scoring 0.00
-# here is correct — the stub embedder is monolingual English.
+# says nothing about quality. The cross-language suite is skipped rather than
+# scored here, because measuring it against a monolingual bag-of-words stub
+# would measure the stub.
 eval-stub: _ensure-venv
-    {{ venv_bin }}/python -m backend.eval.run_eval --stub --comparator --crosslingual
+    {{ venv_bin }}/python -m backend.eval.run_eval --stub --all
 
 # Delete meetings past their org's retention_days (dry run without --commit)
 purge *ARGS: _ensure-venv

@@ -1,0 +1,49 @@
+{
+  "name": "two-documents-one-meeting",
+  "complexity": "fusion",
+  "notes": "Two documents plus a meeting; only one document is on point.",
+  "meetings": [
+    {
+      "title": "Procurement review",
+      "language": "en",
+      "records": [
+        {
+          "key": "raised",
+          "text": "Procurement raised that the penalty clause in the drilling contract looked unusual.",
+          "verification_status": "verified",
+          "relevant": true
+        }
+      ]
+    }
+  ],
+  "documents": [
+    {
+      "title": "Drilling services contract",
+      "language": "en",
+      "chunks": [
+        {
+          "key": "penalty",
+          "text": "Clause 9. Late delivery attracts a penalty of 0.5% of contract value per day, capped at 15%.",
+          "relevant": true
+        }
+      ]
+    },
+    {
+      "title": "Insurance schedule",
+      "language": "en",
+      "chunks": [
+        {
+          "key": "cover",
+          "text": "The public liability limit under this policy is 2,000,000 tenge per occurrence.",
+          "relevant": false
+        }
+      ]
+    }
+  ],
+  "question": "What is the penalty for late delivery under the drilling contract?",
+  "expects_answer": true,
+  "must_cite": ["penalty"],
+  "must_contain_any": ["0.5", "15%"],
+  "must_not_contain": ["2,000,000"],
+  "must_span_kinds": ["document"]
+}

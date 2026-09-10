@@ -1,0 +1,38 @@
+{
+  "name": "document-contradicts-the-meeting",
+  "complexity": "fusion",
+  "notes": "Both sources are retrieved and they disagree. Reporting only one is the failure.",
+  "meetings": [
+    {
+      "title": "Budget call",
+      "language": "en",
+      "records": [
+        {
+          "key": "said",
+          "text": "The agreed capex ceiling for the Aktau site is 400,000 tenge.",
+          "verification_status": "verified",
+          "relevant": true
+        }
+      ]
+    }
+  ],
+  "documents": [
+    {
+      "title": "Approved capex schedule",
+      "language": "en",
+      "chunks": [
+        {
+          "key": "sched",
+          "text": "Aktau site capex ceiling: 500,000 tenge, approved by the finance committee.",
+          "relevant": true
+        }
+      ]
+    }
+  ],
+  "question": "What is the capex ceiling for the Aktau site?",
+  "expects_answer": true,
+  "must_cite": ["said", "sched"],
+  "must_contain_any": ["400,000", "400000", "500,000", "500000"],
+  "must_not_contain": [],
+  "must_span_kinds": ["meeting", "document"]
+}

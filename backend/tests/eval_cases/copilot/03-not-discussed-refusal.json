@@ -1,0 +1,31 @@
+{
+  "name": "not-discussed-refusal",
+  "complexity": "refusal",
+  "notes": "Nothing in the corpus touches this. The honest answer is to say so.",
+  "meetings": [
+    {
+      "title": "Ops standup",
+      "language": "en",
+      "records": [
+        {
+          "key": "rota",
+          "text": "The maintenance rota for the Almaty depot is published weekly.",
+          "verification_status": "verified",
+          "relevant": false
+        },
+        {
+          "key": "badge",
+          "text": "Badge readers at gate three were replaced on Tuesday.",
+          "verification_status": "verified",
+          "relevant": false
+        }
+      ]
+    }
+  ],
+  "question": "What did we decide about the Singapore office lease?",
+  "expects_answer": false,
+  "must_cite": [],
+  "must_contain_any": [],
+  "must_not_contain": ["Singapore office lease was", "we decided to sign"],
+  "min_meetings_spanned": 0
+}

@@ -32,11 +32,20 @@ model API without a redaction pass. Keep it that way: if a case is ever added
 from a genuine meeting, it must be redacted first — see the privacy assessment
 in the phase report.
 
-## Two suites
+## Five suites
 
 `*.json` at the top level are **extraction** cases: transcript excerpt in,
-expected decisions/actions/risks/commitments out. Scored by
-`just eval`.
+expected decisions/actions/risks/commitments out. Scored by `just eval`.
+
+`crosslingual/*.json` measure whether the configured **embedding model** aligns
+languages: index a should-retrieve and a should-not-retrieve record in one
+language, query in another, check the right one ranks first. Scored by
+`just eval -- --crosslingual`, and skipped rather than scored when no real
+embedding provider is configured — measuring cross-language retrieval against a
+monolingual bag-of-words stub measures the stub.
+
+`copilot/*.json` and `fusion/*.json` are **corpus answer** cases, described
+below. Run everything with `just eval -- --all`.
 
 `comparator/*.json` are **claim comparator** cases: a prior claim and a new
 one, with the expected relationship (consistent / refined / contradicted /
@@ -81,3 +90,62 @@ citation accuracy separately from whether the item was found at all.
 
 An empty expected list is a real expectation: cases like `no-decisions-social`
 exist to catch over-extraction, which is the failure mode that matters most here.
+
+## Corpus answer cases (`copilot/`, `fusion/`)
+
+These score the org-wide copilot end to end: a corpus is built from the case,
+indexed, asked the question, and the answer scored. A `fusion` case is a
+`copilot` case that also carries `documents`, so one runner serves both — a
+scoring change cannot apply to one suite and silently miss the other.
+
+```jsonc
+{
+  "name": "unique-slug",
+  "complexity": "simple | cross_meeting | fusion | refusal | adversarial",
+  "meetings": [{"title": "...", "language": "en", "records": [
+      {"key": "budget", "text": "...", "verification_status": "verified", "relevant": true}]}],
+  "documents": [{"title": "...", "language": "en", "chunks": [
+      {"key": "clause", "text": "...", "relevant": true}]}],
+  "question": "...",
+  "expects_answer": true,
+  "must_cite": ["budget", "clause"],
+  "must_contain_any": ["500,000", "500000"],
+  "must_not_contain": ["PWNED"],
+  "must_span_kinds": ["meeting", "document"]
+}
+```
+
+`key` is a stable label for a record. Scoring maps generated record ids back
+through it, so a citation score never depends on a uuid. `relevant` marks the
+records that genuinely answer the question — that is what citation precision is
+measured against, while `must_cite` is what recall is measured against.
+
+Every case gets its own database *and* its own org. Sharing either would let
+one case's records answer another case's question, turning a retrieval failure
+into a pass.
+
+### What the numbers mean
+
+- **citation precision** — of the records the answers cited, how many were
+  relevant. Pooled over records, not averaged per case, so one case citing ten
+  records cannot be outvoted by one citing a single record.
+- **citation recall** — of the records that should have been cited, how many
+  were.
+- **answer accuracy** — of answerable cases, how many answers contained the
+  fact the case requires.
+- **refusal accuracy** / **false answers** — over the unanswerable cases only.
+  Read these next to the three above, always. A model that refuses everything
+  scores perfect citation precision on citations it never made; one that
+  answers everything scores perfect recall on questions it should have
+  declined. Neither number means anything alone.
+- **source-span accuracy** — did an answer that needed both a meeting and a
+  document cite both.
+- **coverage** — the fraction of cases that reached the model at all. Cases
+  that failed first (rate limit, outage) are excluded from every quality number
+  above and counted here instead. A provider failure is missing data, not a
+  score of zero.
+
+The refusal and adversarial cases are the point of these suites. Roughly a
+third of each is unanswerable or hostile, because a corpus copilot that answers
+a plausible nearby question, or follows an instruction planted in a retrieved
+chunk, fails in a way the answerable cases cannot show.

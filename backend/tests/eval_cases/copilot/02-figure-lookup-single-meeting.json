@@ -1,0 +1,31 @@
+{
+  "name": "figure-lookup-single-meeting",
+  "complexity": "simple",
+  "notes": "A codename and a number — the case BM25 should carry even if embeddings drift.",
+  "meetings": [
+    {
+      "title": "Vendor review",
+      "language": "en",
+      "records": [
+        {
+          "key": "notice",
+          "text": "The Zharkyn contract has a 90-day termination notice period.",
+          "verification_status": "verified",
+          "relevant": true
+        },
+        {
+          "key": "unrelated",
+          "text": "We moved the all-hands to Thursday afternoon.",
+          "verification_status": "verified",
+          "relevant": false
+        }
+      ]
+    }
+  ],
+  "question": "What is the termination notice period on the Zharkyn contract?",
+  "expects_answer": true,
+  "must_cite": ["notice"],
+  "must_contain_any": ["90", "ninety"],
+  "must_not_contain": [],
+  "min_meetings_spanned": 1
+}
