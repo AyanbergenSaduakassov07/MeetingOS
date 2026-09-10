@@ -27,16 +27,16 @@ from __future__ import annotations
 
 import enum
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy import (
+    JSON,
     Boolean,
     Column,
     DateTime,
     Float,
     ForeignKey,
     Integer,
-    JSON,
     LargeBinary,
     String,
     Text,
@@ -49,7 +49,7 @@ Base = declarative_base()
 
 def _utcnow() -> datetime:
     """Timezone-aware UTC now, used as the default for every timestamp column."""
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 def _uuid() -> str:
@@ -60,7 +60,7 @@ def _uuid() -> str:
 # ── Enumerations ──────────────────────────────────────────────────────────
 
 
-class UserRole(str, enum.Enum):
+class UserRole(enum.StrEnum):
     """Org-chart role. Drives what a user may see, not just what they may do.
 
     ``board`` and ``auditor`` are read-mostly roles that exist so board packs
@@ -75,7 +75,7 @@ class UserRole(str, enum.Enum):
     AUDITOR = "auditor"
 
 
-class MeetingStatus(str, enum.Enum):
+class MeetingStatus(enum.StrEnum):
     SCHEDULED = "scheduled"
     RECORDING = "recording"
     PROCESSING = "processing"
@@ -83,7 +83,7 @@ class MeetingStatus(str, enum.Enum):
     FAILED = "failed"
 
 
-class MeetingSource(str, enum.Enum):
+class MeetingSource(enum.StrEnum):
     LIVE = "live"
     UPLOAD = "upload"
     ZOOM = "zoom"
@@ -91,13 +91,13 @@ class MeetingSource(str, enum.Enum):
     TEAMS = "teams"
 
 
-class Visibility(str, enum.Enum):
+class Visibility(enum.StrEnum):
     PRIVATE = "private"
     TEAM = "team"
     ORG = "org"
 
 
-class DecisionStatus(str, enum.Enum):
+class DecisionStatus(enum.StrEnum):
     PROPOSED = "proposed"
     AGREED = "agreed"
     DEFERRED = "deferred"
@@ -105,7 +105,7 @@ class DecisionStatus(str, enum.Enum):
     SUPERSEDED = "superseded"
 
 
-class DecisionEventType(str, enum.Enum):
+class DecisionEventType(enum.StrEnum):
     PROPOSED = "proposed"
     DISCUSSED = "discussed"
     AGREED = "agreed"
@@ -114,7 +114,7 @@ class DecisionEventType(str, enum.Enum):
     SUPERSEDED = "superseded"
 
 
-class ActionItemStatus(str, enum.Enum):
+class ActionItemStatus(enum.StrEnum):
     OPEN = "open"
     IN_PROGRESS = "in_progress"
     BLOCKED = "blocked"
@@ -122,35 +122,35 @@ class ActionItemStatus(str, enum.Enum):
     CANCELLED = "cancelled"
 
 
-class Priority(str, enum.Enum):
+class Priority(enum.StrEnum):
     LOW = "low"
     MEDIUM = "medium"
     HIGH = "high"
     URGENT = "urgent"
 
 
-class RiskSeverity(str, enum.Enum):
+class RiskSeverity(enum.StrEnum):
     LOW = "low"
     MEDIUM = "medium"
     HIGH = "high"
     CRITICAL = "critical"
 
 
-class RiskStatus(str, enum.Enum):
+class RiskStatus(enum.StrEnum):
     OPEN = "open"
     MITIGATING = "mitigating"
     ACCEPTED = "accepted"
     CLOSED = "closed"
 
 
-class CommitmentStatus(str, enum.Enum):
+class CommitmentStatus(enum.StrEnum):
     PENDING = "pending"
     KEPT = "kept"
     BROKEN = "broken"
     RENEGOTIATED = "renegotiated"
 
 
-class VerificationStatus(str, enum.Enum):
+class VerificationStatus(enum.StrEnum):
     """Whether an extracted claim is actually supported by the segment it cites.
 
     ``UNSUPPORTED`` is reserved for a citation that does not resolve to a real
@@ -166,7 +166,7 @@ class VerificationStatus(str, enum.Enum):
     UNSUPPORTED = "unsupported"
 
 
-class DocumentType(str, enum.Enum):
+class DocumentType(enum.StrEnum):
     AGENDA = "agenda"
     DECK = "deck"
     MINUTES = "minutes"
@@ -175,7 +175,7 @@ class DocumentType(str, enum.Enum):
     OTHER = "other"
 
 
-class EvalTask(str, enum.Enum):
+class EvalTask(enum.StrEnum):
     """Which extraction path an eval case exercises."""
 
     TRANSCRIPTION = "transcription"
@@ -238,7 +238,10 @@ class User(Base):
     updated_at = Column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow)
 
     organization = relationship("Organization", back_populates="users", foreign_keys=[org_id])
-    reports = relationship("User", backref="manager", remote_side=[id])
+    # `id` is this class's Column, not the builtin — the standard SQLAlchemy
+    # self-referential idiom. Renaming the primary key to satisfy the lint
+    # would be the wrong way round.
+    reports = relationship("User", backref="manager", remote_side=[id])  # noqa: A003
 
 
 # ── Meetings and raw signal ───────────────────────────────────────────────
@@ -428,9 +431,7 @@ class Evidence(Base):
     end_ms = Column(Integer, nullable=True)
 
     confidence = Column(Float, nullable=True)
-    verification_status = Column(
-        String, nullable=False, default=VerificationStatus.UNVERIFIED.value, index=True
-    )
+    verification_status = Column(String, nullable=False, default=VerificationStatus.UNVERIFIED.value, index=True)
     verification_score = Column(Float, nullable=True)
 
     created_at = Column(DateTime(timezone=True), default=_utcnow)
@@ -444,11 +445,9 @@ class Evidence(Base):
         cascade="all, delete-orphan",
     )
 
-    def cite(self, segment) -> "EvidenceCitation":
+    def cite(self, segment) -> EvidenceCitation:
         """Add a source segment and widen the span to include it."""
-        citation = EvidenceCitation(
-            evidence=self, segment_id=segment.id, sequence=len(self.citations)
-        )
+        citation = EvidenceCitation(evidence=self, segment_id=segment.id, sequence=len(self.citations))
         self.citations.append(citation)
         if segment.start_ms is not None:
             self.start_ms = segment.start_ms if self.start_ms is None else min(self.start_ms, segment.start_ms)
@@ -501,7 +500,7 @@ class _EvidenceBacked:
     what lets ``_persist`` keep building items field by field.
     """
 
-    def _ensure_evidence(self) -> "Evidence":
+    def _ensure_evidence(self) -> Evidence:
         if self.evidence is None:
             self.evidence = Evidence(org_id=self.org_id, meeting_id=self.meeting_id)
         return self.evidence
@@ -586,7 +585,7 @@ class Decision(_EvidenceBacked, Base):
     meeting = relationship("Meeting")
     evidence = relationship("Evidence")
     decision_maker = relationship("User")
-    supersedes = relationship("Decision", remote_side=[id])
+    supersedes = relationship("Decision", remote_side=[id])  # noqa: A003
     events = relationship("DecisionEvent", back_populates="decision", cascade="all, delete-orphan")
 
 
@@ -773,9 +772,7 @@ class Document(Base):
 
     meeting = relationship("Meeting")
     uploaded_by = relationship("User")
-    chunks = relationship(
-        "DocumentChunk", back_populates="document", cascade="all, delete-orphan"
-    )
+    chunks = relationship("DocumentChunk", back_populates="document", cascade="all, delete-orphan")
 
 
 class DocumentChunk(Base):
@@ -829,6 +826,52 @@ class MeetingDocument(Base):
 
     meeting = relationship("Meeting")
     document = relationship("Document")
+
+
+class ProviderCall(Base):
+    """One outbound call to a third-party model or transcription API.
+
+    The audit log the privacy page reads. Answers the question an operator
+    cannot otherwise answer: *what left this machine, to whom, and when.*
+
+    **Content is never stored here.** The point is accountability, not a second
+    copy of the transcript — a log holding the prompts would double the
+    exposure it exists to document. What is kept is the shape of the call: how
+    many characters went out, whether redaction was on and how many spans it
+    removed, the destination host, and the token cost.
+    """
+
+    __tablename__ = "provider_calls"
+
+    id = Column(String, primary_key=True, default=_uuid)
+    org_id = Column(String, ForeignKey("organizations.id"), nullable=True, index=True)
+    meeting_id = Column(String, ForeignKey("meetings.id"), nullable=True, index=True)
+
+    provider = Column(String, nullable=False, index=True)
+    model = Column(String, nullable=True)
+    # generate | extract | embed | transcribe
+    operation = Column(String, nullable=False, index=True)
+    # The host the payload actually went to, resolved from the base URL.
+    endpoint_host = Column(String, nullable=True, index=True)
+    # True when the destination is not this machine.
+    is_cloud = Column(Boolean, default=True, index=True)
+
+    # Size, not content.
+    characters_sent = Column(Integer, nullable=True)
+    items_sent = Column(Integer, nullable=True)
+    input_tokens = Column(Integer, nullable=True)
+    output_tokens = Column(Integer, nullable=True)
+
+    redaction_enabled = Column(Boolean, default=False)
+    redactions_applied = Column(Integer, default=0)
+
+    succeeded = Column(Boolean, default=True, index=True)
+    error = Column(Text, nullable=True)
+    duration_ms = Column(Integer, nullable=True)
+
+    created_at = Column(DateTime(timezone=True), default=_utcnow, index=True)
+
+    meeting = relationship("Meeting")
 
 
 class EvalCase(Base):
