@@ -54,7 +54,7 @@ just seed-demo              # a demo team and one processed meeting (into ./data
 just dev                    # API on :8470, UI on http://localhost:5173
 ```
 
-Everything works on the demo meeting except asking the copilot. To process your own recordings, add one model key to `.env` (for example `ANTHROPIC_API_KEY`, plus `OPENAI_API_KEY` for Whisper transcription) and install ffmpeg.
+Everything works on the demo meeting except asking the copilot. To process your own recordings, add one model key to `.env` (for example `ANTHROPIC_API_KEY`). For transcription, either set `OPENAI_API_KEY` for cloud Whisper or run it locally: `uv pip install -r backend/requirements-local.txt` and `TRANSCRIPTION_PROVIDER=faster_whisper`. If extraction can't run, the meeting page says so instead of showing an empty report.
 
 ### Docker
 

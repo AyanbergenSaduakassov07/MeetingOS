@@ -92,7 +92,8 @@
     "processingTitle": "Идёт обработка",
     "processingDetail": "Расшифровка и извлечение выполняются. Страница обновится сама.",
     "failedTitle": "Обработка не удалась",
-    "failedDetail": "Эту запись не удалось обработать."
+    "failedDetail": "Эту запись не удалось обработать.",
+    "extractionIncomplete": "Извлечение не завершено"
   },
   "intelligence": {
     "decisions": "Решения",

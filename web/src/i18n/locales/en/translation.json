@@ -92,7 +92,8 @@
     "processingTitle": "Still processing",
     "processingDetail": "Transcription and extraction are running. This page updates on its own.",
     "failedTitle": "Processing failed",
-    "failedDetail": "This recording could not be processed."
+    "failedDetail": "This recording could not be processed.",
+    "extractionIncomplete": "Extraction did not finish"
   },
   "intelligence": {
     "decisions": "Decisions",

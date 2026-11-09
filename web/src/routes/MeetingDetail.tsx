@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { AlertCircle, Loader2 } from 'lucide-react';
+import { AlertCircle, AlertTriangle, Loader2 } from 'lucide-react';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router-dom';
@@ -171,6 +171,19 @@ export function MeetingDetail() {
                 <dd className="font-mono tabular-nums">{speakerCount || '—'}</dd>
               </div>
             </dl>
+            {/* Transcript is fine but extraction was partial: zero items must not read as "nothing decided". */}
+            {data.processing_error && (
+              <div
+                data-testid="extraction-warning"
+                className="mt-3 flex items-start gap-2 rounded-md border border-warn/40 bg-warn/10 px-3 py-2 text-sm"
+              >
+                <AlertTriangle aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-warn" />
+                <div>
+                  <p className="font-medium">{t('meetings.extractionIncomplete')}</p>
+                  <p className="text-muted-foreground">{data.processing_error}</p>
+                </div>
+              </div>
+            )}
           </header>
 
           <Tabs defaultValue="summary" className="flex min-h-0 flex-1 flex-col">

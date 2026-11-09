@@ -32,6 +32,8 @@ from ..transcription.base import DiarizationResult, TranscriptionResult, merge_d
 
 logger = logging.getLogger(__name__)
 
+MAX_ERROR_LENGTH = 1000
+
 # asyncio holds only a weak reference to a bare task, so a task nobody keeps
 # can be garbage-collected mid-flight. Holding them here until they finish is
 # what backend/services/task_queue.py did before it was stripped.
@@ -161,8 +163,42 @@ async def _try_extract(meeting_id: str) -> None:
     try:
         report = await intelligence.extract_meeting_intelligence(meeting_id)
         logger.info("Extracted %d intelligence item(s) for meeting %s", report.total, meeting_id)
+        problems = report.errors
     except Exception as exc:
         logger.warning("Intelligence extraction skipped for meeting %s: %s", meeting_id, exc)
+        problems = [str(exc)]
+    # Without this, a meeting whose extractors all failed reads as "no decisions were made".
+    _record_extraction_problems(meeting_id, problems)
+
+
+def _summarize_problems(problems: list[str]) -> str | None:
+    """Collapse "<kind> extraction failed: <cause>" lines that share a cause into one sentence."""
+    if not problems:
+        return None
+    kinds_by_cause: dict[str, list[str]] = {}
+    for problem in problems:
+        head, sep, cause = problem.partition(" extraction failed: ")
+        kinds_by_cause.setdefault(cause if sep else problem, []).append(head if sep else "")
+    parts = [
+        f"{', '.join(k for k in kinds if k)} not extracted: {cause}" if any(kinds) else cause
+        for cause, kinds in kinds_by_cause.items()
+    ]
+    return ("Extraction incomplete. " + " ".join(parts))[:MAX_ERROR_LENGTH]
+
+
+def _record_extraction_problems(meeting_id: str, problems: list[str]) -> None:
+    """Store why extraction was incomplete on the meeting; the status stays ``completed``."""
+    from ..database import new_session
+
+    db: Session = new_session()
+    try:
+        meeting = db.query(Meeting).filter(Meeting.id == meeting_id).first()
+        if meeting is None:
+            return
+        meeting.processing_error = _summarize_problems(problems)
+        db.commit()
+    finally:
+        db.close()
 
 
 async def _try_segment(meeting_id: str) -> None:

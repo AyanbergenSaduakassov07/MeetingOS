@@ -22,6 +22,7 @@ Goal: make the codebase our own and close the gaps that blocked any real use.
 
 Goal: know how good the extraction is on real meetings, not on seeded data.
 
+- [x] Messy synthetic recording (`scripts/make_messy_meeting.py`: pauses, sighs, fast speech, overlap, a Russian aside) run end to end through local transcription. Found and fixed: dropped Russian line, timestamps ~8 s early after long pauses, an empty report shown as "no decisions" when extraction had no key
 - [ ] Record 5–10 real meetings (with consent), English and Russian, and annotate the decisions, actions and commitments by hand
 - [ ] Add them to `backend/eval` as frozen cases; report precision and recall per item type
 - [ ] Embeddings provider that works on the free path (local `bge-m3` via an OpenAI-compatible server), so cross-language retrieval is measured with real vectors instead of the stub

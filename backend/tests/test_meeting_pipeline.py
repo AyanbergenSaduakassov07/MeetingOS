@@ -325,7 +325,9 @@ def test_successful_run_writes_segments_with_speakers_and_timestamps(db, org, da
 
     provider = FakeTranscriber(segments=_three_segments(), diarization=_two_speaker_diarization())
 
-    asyncio.run(asyncio.wait_for(ingestion.process_meeting(meeting_id, provider=provider), timeout=10))
+    asyncio.run(
+        asyncio.wait_for(ingestion.process_meeting(meeting_id, provider=provider, run_segmentation=False), timeout=10)
+    )
 
     db.expire_all()
     processed = db.query(Meeting).filter(Meeting.id == meeting_id).one()
@@ -555,3 +557,52 @@ def test_segment_meeting_with_no_segments_is_a_noop(db, org, data_dir):
     topics = asyncio.run(segmentation.segment_meeting(meeting.id, embedder=embedder))
     assert topics == []
     assert embedder.calls == 0
+
+
+def _completed_meeting(db, org) -> str:
+    meeting = Meeting(org_id=org.id, title="Extraction outcome", status=MeetingStatus.COMPLETED.value)
+    db.add(meeting)
+    db.commit()
+    return meeting.id
+
+
+def test_failed_extraction_is_recorded_not_shown_as_empty(db, org, monkeypatch):
+    """No API key used to yield a 'completed' meeting with zero items and no hint why."""
+    from backend.meetings import ingestion, intelligence
+
+    meeting_id = _completed_meeting(db, org)
+
+    async def failing(mid):
+        report = intelligence.ExtractionReport(meeting_id=mid)
+        report.errors = [
+            f"{kind} extraction failed: ANTHROPIC_API_KEY is not set." for kind in ("decision", "risk")
+        ] + ["verification failed: no embedder"]
+        return report
+
+    monkeypatch.setattr(intelligence, "extract_meeting_intelligence", failing)
+    asyncio.run(ingestion._try_extract(meeting_id))
+
+    db.expire_all()
+    meeting = db.get(Meeting, meeting_id)
+    assert meeting.status == MeetingStatus.COMPLETED.value
+    assert meeting.processing_error == (
+        "Extraction incomplete. decision, risk not extracted: ANTHROPIC_API_KEY is not set. "
+        "verification failed: no embedder"
+    )
+
+
+def test_clean_extraction_clears_an_old_problem(db, org, monkeypatch):
+    from backend.meetings import ingestion, intelligence
+
+    meeting_id = _completed_meeting(db, org)
+    db.get(Meeting, meeting_id).processing_error = "Extraction incomplete. stale"
+    db.commit()
+
+    async def ok(mid):
+        return intelligence.ExtractionReport(meeting_id=mid)
+
+    monkeypatch.setattr(intelligence, "extract_meeting_intelligence", ok)
+    asyncio.run(ingestion._try_extract(meeting_id))
+
+    db.expire_all()
+    assert db.get(Meeting, meeting_id).processing_error is None
