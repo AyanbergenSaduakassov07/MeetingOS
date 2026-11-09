@@ -10,6 +10,7 @@ from __future__ import annotations
 import asyncio
 import importlib.util
 import os
+import re
 from pathlib import Path
 
 from ..base import (
@@ -21,7 +22,24 @@ from ..base import (
     TranscriptionResult,
 )
 
-INSTALL_HINT = "faster-whisper is not installed. Run `uv pip install faster-whisper` to transcribe locally."
+INSTALL_HINT = (
+    "faster-whisper is not installed. Run `uv pip install -r backend/requirements-local.txt` to transcribe locally."
+)
+
+_CYRILLIC = re.compile(r"[\u0400-\u04FF]")
+_LETTER = re.compile(r"[^\W\d_]")
+
+
+def _segment_language(text: str, file_language: str | None) -> str | None:
+    """Tag Cyrillic-majority lines in a non-Cyrillic meeting as Russian.
+
+    faster-whisper detects language per window but does not report it per segment.
+    shortcut: script-based, so Kazakh lines also read as "ru"; switch to per-segment detection when KZ matters.
+    """
+    letters = len(_LETTER.findall(text))
+    if file_language in ("ru", "kk") or not letters:
+        return file_language
+    return "ru" if len(_CYRILLIC.findall(text)) * 2 > letters else file_language
 
 
 def default_config() -> TranscriptionConfig:
@@ -59,7 +77,17 @@ class FasterWhisperProvider(TranscriptionProvider):
 
     def _transcribe_sync(self, audio_path: Path, language: str | None, prompt: str | None) -> TranscriptionResult:
         model = self._load_model()
-        segments, info = model.transcribe(str(audio_path), language=language, initial_prompt=prompt)
+        # Tested on a messy 4-speaker recording: without VAD a segment after a long pause starts ~8 s early,
+        # without multilingual a Russian aside in an English meeting is dropped, and word timestamps
+        # tighten segment ends so citation jumps land on speech.
+        segments, info = model.transcribe(
+            str(audio_path),
+            language=language,
+            initial_prompt=prompt,
+            vad_filter=True,
+            multilingual=True,
+            word_timestamps=True,
+        )
         # segments is a lazy generator: decoding happens while iterating, so keep this in the worker thread.
         out = [
             TranscribedSegment(
@@ -67,7 +95,7 @@ class FasterWhisperProvider(TranscriptionProvider):
                 end_ms=round(s.end * 1000),
                 text=s.text.strip(),
                 confidence=None,
-                language=info.language,
+                language=_segment_language(s.text, info.language),
                 speaker_label=None,
             )
             for s in segments

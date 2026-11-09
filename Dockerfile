@@ -11,7 +11,7 @@ COPY web/ ./web/
 RUN cd web && bun run build
 
 FROM python:3.13-slim
-RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg curl \
+RUN apt-get update && apt-get install -y --no-install-recommends curl \
     && rm -rf /var/lib/apt/lists/* \
     && groupadd -r meetingos && useradd -r -g meetingos -m meetingos
 WORKDIR /app

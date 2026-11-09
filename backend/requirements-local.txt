@@ -1,0 +1,4 @@
+# Optional: local transcription (TRANSCRIPTION_PROVIDER=faster_whisper).
+faster-whisper>=1.2,<2
+# faster-whisper 1.2 calls av.open(metadata_errors=...), which PyAV 16+ removed.
+av>=12,<16
