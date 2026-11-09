@@ -2,7 +2,7 @@
 
 Target: **v1.0 is a version a small team (a student club, a 5–20 person startup) can self-host and trust with real meetings.** Every milestone ends with something you can demo.
 
-## v0.2: Foundation (current)
+## v0.2: Foundation (released)
 
 Goal: make the codebase our own and close the gaps that blocked any real use.
 
@@ -16,9 +16,9 @@ Goal: make the codebase our own and close the gaps that blocked any real use.
 - [x] Login screen, consent dialog, sign-out
 - [x] README, `.env.example`, security policy
 - [x] Playwright web tests in CI, against a seeded demo dataset (`just seed-demo`)
-- [ ] Tag `v0.2.0`
+- [x] Tag `v0.2.0`
 
-## v0.3: Measured quality
+## v0.3: Measured quality (current)
 
 Goal: know how good the extraction is on real meetings, not on seeded data.
 
