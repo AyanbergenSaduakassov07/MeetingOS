@@ -192,5 +192,21 @@
     "redacted": "Redacted",
     "yes": "Yes",
     "no": "No"
+  },
+  "auth": {
+    "prompt": "This MeetingOS server is protected. Enter the API key set in MEETINGOS_API_KEY.",
+    "keyLabel": "API key",
+    "signIn": "Sign in",
+    "signOut": "Sign out",
+    "wrongKey": "That key is not correct.",
+    "unreachable": "Could not reach the server. Try again."
+  },
+  "consent": {
+    "title": "Recording consent",
+    "description": "Before uploading “{{name}}”, confirm that everyone in the recording knew it was being recorded and agreed.",
+    "checkbox": "Everyone in this recording agreed to be recorded and to have it transcribed.",
+    "noteLabel": "Note (optional)",
+    "notePlaceholder": "e.g. Consent given verbally at the start of the call",
+    "confirm": "Upload"
   }
 }

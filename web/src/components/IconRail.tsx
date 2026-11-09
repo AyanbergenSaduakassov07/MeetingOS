@@ -11,8 +11,8 @@ import { NavLink } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 
 /**
- * Narrow icon-only rail — the structural pattern Voicebox's Sidebar used
- * (fixed left, logo at top, a column of 48px circular targets), retheme only.
+ * Narrow icon-only rail: fixed left, logo at top, a column of 48px circular
+ * targets.
  *
  * Icon-only navigation costs discoverability, so every target carries both
  * `title` (pointer) and `aria-label` (assistive tech), and the active one is
@@ -38,9 +38,9 @@ export function IconRail() {
         to="/meetings"
         aria-label={t('nav.brand')}
         title={t('nav.brand')}
-        className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-primary font-display text-lg font-black text-primary-foreground"
+        className="size-12 shrink-0 rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
-        M
+        <img src="/favicon.svg" alt="" className="size-12" />
       </NavLink>
 
       <ul className="flex flex-col gap-3">
