@@ -11,7 +11,7 @@ from urllib.parse import quote
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from . import __version__, config, database
+from . import __version__, auth, config, database
 from .routes import register_routers
 
 
@@ -57,7 +57,6 @@ def safe_content_disposition(disposition_type: str, filename: str) -> str:
 
 def create_app() -> FastAPI:
     """Create and configure the FastAPI application."""
-    from .mcp_server.context import ClientIdMiddleware
     from .mcp_server.server import build_mcp_server, compose_lifespan
 
     # Build the MCP app up-front so we can wire its lifespan into FastAPI's —
@@ -88,8 +87,11 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
 
+    # Starlette wraps each added middleware around the previous ones, so CORS
+    # (added second) is outermost: preflights and 401s still get CORS headers.
+    application.add_middleware(auth.ApiKeyMiddleware)
     _configure_cors(application)
-    application.add_middleware(ClientIdMiddleware)
+    application.include_router(auth.router)
     register_routers(application)
     application.mount("/mcp", mcp_app)
     logger.info("MCP: mounted at /mcp")
@@ -101,14 +103,13 @@ def create_app() -> FastAPI:
 def _configure_cors(application: FastAPI) -> None:
     """Set up CORS middleware with local-first defaults.
 
-    The ``tauri://`` origins the desktop app needed are gone with it; what
-    remains is the Vite dev server and the API's own origin.
+    Allowed by default: the Vite dev server and the API's own origin.
     """
     default_origins = [
         "http://localhost:5173",  # Vite dev server
         "http://127.0.0.1:5173",
-        "http://localhost:17493",
-        "http://127.0.0.1:17493",
+        "http://localhost:8470",
+        "http://127.0.0.1:8470",
     ]
     env_origins = os.environ.get("MEETINGOS_CORS_ORIGINS", "")
     extra_origins = [o.strip() for o in env_origins.split(",") if o.strip()]

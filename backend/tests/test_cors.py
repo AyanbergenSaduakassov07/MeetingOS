@@ -2,7 +2,7 @@
 Tests for CORS origin restrictions.
 
 Validates that the CORS middleware only allows known local origins
-and respects the VOICEBOX_CORS_ORIGINS environment variable.
+and respects the MEETINGOS_CORS_ORIGINS environment variable.
 
 Uses a minimal FastAPI app that mirrors the exact CORS configuration
 from backend/main.py, so tests run without heavy ML dependencies.
@@ -30,8 +30,8 @@ def _build_app(env_origins: str = "") -> FastAPI:
     _default_origins = [
         "http://localhost:5173",
         "http://127.0.0.1:5173",
-        "http://localhost:17493",
-        "http://127.0.0.1:17493",
+        "http://localhost:8470",
+        "http://127.0.0.1:8470",
         "tauri://localhost",
         "https://tauri.localhost",
     ]
@@ -88,8 +88,8 @@ class TestCORSDefaultOrigins:
         [
             "http://localhost:5173",
             "http://127.0.0.1:5173",
-            "http://localhost:17493",
-            "http://127.0.0.1:17493",
+            "http://localhost:8470",
+            "http://127.0.0.1:8470",
             "tauri://localhost",
             "https://tauri.localhost",
         ],
@@ -125,7 +125,7 @@ class TestCORSDefaultOrigins:
 
 
 class TestCORSCustomOrigins:
-    """VOICEBOX_CORS_ORIGINS env var should extend the allowlist."""
+    """MEETINGOS_CORS_ORIGINS env var should extend the allowlist."""
 
     def test_custom_origin_allowed(self, client_with_custom_origins):
         headers = _get_with_origin(client_with_custom_origins, "https://custom.example.com")
@@ -145,7 +145,7 @@ class TestCORSCustomOrigins:
 
 
 class TestCORSEnvVarParsing:
-    """Edge cases for VOICEBOX_CORS_ORIGINS parsing."""
+    """Edge cases for MEETINGOS_CORS_ORIGINS parsing."""
 
     def test_empty_env_var(self):
         app = _build_app("")

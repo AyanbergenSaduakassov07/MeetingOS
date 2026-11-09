@@ -1,11 +1,9 @@
 {
   "mcpServers": {
-    "voicebox": {
+    "meetingos": {
       "type": "http",
-      "url": "http://127.0.0.1:17493/mcp",
-      "headers": {
-        "X-Voicebox-Client-Id": "claude-code"
-      }
+      "url": "http://127.0.0.1:8470/mcp",
+      "headers": { "Authorization": "Bearer ${MEETINGOS_API_KEY}" }
     }
   }
 }

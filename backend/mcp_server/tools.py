@@ -1,58 +1,87 @@
-"""MeetingOS MCP tool implementations.
+"""MeetingOS tools for MCP clients (Claude Code, Cursor, any MCP host).
 
-All four voicebox tools are gone.  Why each, since three of them were
-predictable and the fourth was not:
-
-``voicebox.speak`` and ``voicebox.list_profiles``
-    Removed with the TTS surface.  Both are voice-profile operations and
-    there is nothing in the meeting domain they map onto.
-
-``voicebox.list_captures``
-    Removed.  "Captures" were push-to-talk dictation clips.  The nearest
-    meeting concept is a ``Meeting``, but the two are not the same object and
-    an agent listing meetings wants filters ("last week's board meetings"),
-    not a reverse-chronological clip feed.  Reusing the name would have
-    shipped a misleading tool.
-
-``voicebox.transcribe``
-    Removed, and this one is worth explaining because Phase 0 identified it
-    as the tool that could survive.  On a closer read it does not generalize:
-    it resolved a *local* Whisper model, validated the requested size against
-    ``WHISPER_HF_REPOS``, checked the model was already downloaded, and told
-    failing callers to "open Voicebox → Settings → Models".  Every one of
-    those references is gone.  What remained after stripping them was a
-    thin base64/path wrapper shaped for short dictation clips — a 200 MB
-    ceiling, one-shot, no diarization, no speaker attribution, no job
-    tracking.  A two-hour board recording needs all four.  Rewriting it
-    against ``backend.transcription`` would not be adapting the tool, it
-    would be writing a new one under an old name.
-
-Future work, explicitly not v0.1: an ``ask_meeting`` tool that takes a
-question and a meeting id and answers over the stored transcript, decisions,
-and action items.  That is the tool an agent actually wants, and it depends on
-extraction and retrieval that do not exist yet.  Adding it before then would
-mean shipping an endpoint with nothing behind it.
-
-The MCP server itself stays mounted and running — the transport, client-id
-middleware, and event stream are all still wired — so registering the first
-meeting tool is a one-function change.
+Read-only by design: an agent can look things up and ask questions, never
+create, edit, or delete. Each tool is a thin call into the same service layer
+the REST API uses, so behaviour and safeguards match the web UI exactly.
 """
 
 from __future__ import annotations
 
-import logging
+from typing import Any
 
 from fastmcp import FastMCP
 
-logger = logging.getLogger(__name__)
+from .. import config
+from ..database import Meeting, Organization, new_session
+from ..meetings.commitments import list_commitments
+from ..memory.org_copilot import ask_corpus
+
+MAX_MEETINGS = 100
+MAX_COMMITMENTS = 200
+
+
+def _org_id(db) -> str:
+    """The pinned org, or the only org. Ambiguity is an error, never a guess."""
+    pinned = config.pinned_org_id()
+    if pinned:
+        return pinned
+    orgs = db.query(Organization).limit(2).all()
+    if len(orgs) != 1:
+        raise ValueError("Set MEETINGOS_ORG_ID: this database holds zero or several organizations.")
+    return orgs[0].id
+
+
+def list_meetings_tool(limit: int = 20, status: str | None = None) -> list[dict[str, Any]]:
+    """Recent meetings, newest first."""
+    with new_session() as db:
+        query = db.query(Meeting).filter(Meeting.org_id == _org_id(db))
+        if status:
+            query = query.filter(Meeting.status == status)
+        rows = query.order_by(Meeting.created_at.desc()).limit(max(1, min(limit, MAX_MEETINGS))).all()
+        return [
+            {
+                "id": m.id,
+                "title": m.title,
+                "status": m.status,
+                "language": m.language,
+                "date": (m.actual_start or m.scheduled_start or m.created_at).isoformat()
+                if (m.actual_start or m.scheduled_start or m.created_at)
+                else None,
+            }
+            for m in rows
+        ]
+
+
+def list_commitments_tool(overdue: bool | None = None, limit: int = 50) -> list[dict[str, Any]]:
+    """Commitments and action items across all meetings, most overdue first."""
+    with new_session() as db:
+        items = list_commitments(db, org_id=_org_id(db), overdue=overdue, limit=max(1, min(limit, MAX_COMMITMENTS)))
+        return [vars(item) for item in items]
+
+
+async def ask_tool(question: str, answer_language: str | None = None) -> dict[str, Any]:
+    """Answer from every meeting and document, with citations back to the source."""
+    with new_session() as db:
+        result = await ask_corpus(question[:1000], org_id=_org_id(db), answer_language=answer_language, db=db)
+        return {
+            "answer": result.answer,
+            "not_discussed": result.not_discussed,
+            "citations": [vars(c) for c in result.citations],
+        }
 
 
 def register_tools(mcp: FastMCP) -> None:
-    """Attach MeetingOS tools to the given FastMCP instance.
-
-    Intentionally empty for v0.1: the server exposes no tools until
-    ``ask_meeting`` lands.  A FastMCP server with zero tools is valid — it
-    completes the handshake and returns an empty tool list — so clients
-    connect cleanly and simply see nothing to call.
-    """
-    logger.info("MCP: no tools registered (v0.1 — meeting tools are future work)")
+    mcp.tool(name="list_meetings", description="List recent meetings (id, title, status, date). Newest first.")(
+        list_meetings_tool
+    )
+    mcp.tool(
+        name="list_commitments",
+        description="Commitments and action items with owner, due date and overdue flag. overdue=true for late only.",
+    )(list_commitments_tool)
+    mcp.tool(
+        name="ask",
+        description=(
+            "Ask a question across all meetings and documents. Returns an answer with citations "
+            "(meeting, timestamp, quote). not_discussed=true means the record has no answer."
+        ),
+    )(ask_tool)

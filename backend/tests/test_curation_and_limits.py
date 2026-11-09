@@ -190,7 +190,7 @@ def test_oversized_upload_is_rejected_with_413(data_dir, db, monkeypatch):
         response = client.post(
             "/api/meetings/upload",
             files={"file": ("big.wav", b"\x00" * 4096, "audio/wav")},
-            data={"title": "too big"},
+            data={"title": "too big", "consent_confirmed": "true"},
         )
 
     assert response.status_code == 413
@@ -209,7 +209,7 @@ def test_rejected_upload_leaves_no_meeting_row(data_dir, monkeypatch, db):
         client.post(
             "/api/meetings/upload",
             files={"file": ("big.wav", b"\x00" * 4096, "audio/wav")},
-            data={"title": "too big"},
+            data={"title": "too big", "consent_confirmed": "true"},
         )
     assert db.query(Meeting).count() == 0
 

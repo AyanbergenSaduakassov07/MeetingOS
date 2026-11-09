@@ -1,18 +1,24 @@
-"""Entry point for the voicebox backend.
+"""MeetingOS server entry point.
 
 Imports the configured FastAPI app and provides a ``python -m backend.main``
 entry point for development.
 """
 
 import argparse
+from pathlib import Path
 
 import uvicorn
+from dotenv import load_dotenv
 
-from . import config, database
-from .app import app  # noqa: F401 -- re-export for uvicorn "backend.main:app"
+# Before importing the app: providers and auth read the environment.
+load_dotenv(Path(__file__).resolve().parent.parent / ".env")
+
+from . import config, database  # noqa: E402
+from .app import app  # noqa: E402, F401 -- re-export for uvicorn "backend.main:app"
+from .auth import require_safe_bind  # noqa: E402
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="voicebox backend server")
+    parser = argparse.ArgumentParser(description="MeetingOS server")
     parser.add_argument(
         "--host",
         type=str,
@@ -22,16 +28,18 @@ if __name__ == "__main__":
     parser.add_argument(
         "--port",
         type=int,
-        default=8000,
+        default=8470,
         help="Port to bind to",
     )
     parser.add_argument(
         "--data-dir",
         type=str,
         default=None,
-        help="Data directory for database, profiles, and generated audio",
+        help="Data directory for the database and meeting recordings",
     )
     args = parser.parse_args()
+
+    require_safe_bind(args.host)
 
     if args.data_dir:
         config.set_data_dir(args.data_dir)

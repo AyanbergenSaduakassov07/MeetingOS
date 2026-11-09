@@ -187,7 +187,7 @@ def test_upload_creates_meeting_with_processing_status(client, db, org, monkeypa
     response = client.post(
         "/api/meetings/upload",
         files={"file": ("club-meeting.wav", _wav_bytes(), "audio/wav")},
-        data={"title": "Club meeting", "org_id": org.id},
+        data={"title": "Club meeting", "org_id": org.id, "consent_confirmed": "true"},
     )
 
     assert response.status_code == 202, response.text
@@ -215,7 +215,7 @@ def test_upload_preserves_uploaded_extension(client, db, org, monkeypatch):
     response = client.post(
         "/api/meetings/upload",
         files={"file": ("standup.m4a", _wav_bytes(), "audio/mp4")},
-        data={"title": "Standup", "org_id": org.id},
+        data={"title": "Standup", "org_id": org.id, "consent_confirmed": "true"},
     )
 
     assert response.status_code == 202
@@ -234,7 +234,7 @@ def test_upload_rejects_unsupported_file_type(client, db, org, monkeypatch):
     response = client.post(
         "/api/meetings/upload",
         files={"file": ("notes.txt", b"not audio at all", "text/plain")},
-        data={"title": "Notes", "org_id": org.id},
+        data={"title": "Notes", "org_id": org.id, "consent_confirmed": "true"},
     )
 
     assert response.status_code == 400
@@ -253,7 +253,7 @@ def test_upload_rejects_missing_filename(client, db, org, monkeypatch):
     response = client.post(
         "/api/meetings/upload",
         files={"file": ("", _wav_bytes(), "audio/wav")},
-        data={"title": "Nameless", "org_id": org.id},
+        data={"title": "Nameless", "org_id": org.id, "consent_confirmed": "true"},
     )
     assert response.status_code in (400, 422)
 
@@ -449,7 +449,7 @@ def test_upload_runs_the_real_background_task_to_completion(client, db, org, mon
     response = client.post(
         "/api/meetings/upload",
         files={"file": ("club.wav", _wav_bytes(seconds=9), "audio/wav")},
-        data={"title": "Club meeting", "org_id": org.id},
+        data={"title": "Club meeting", "org_id": org.id, "consent_confirmed": "true"},
     )
     assert response.status_code == 202
     meeting_id = response.json()["id"]
