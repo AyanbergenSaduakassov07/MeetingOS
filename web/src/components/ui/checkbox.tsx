@@ -11,9 +11,9 @@ export interface CheckboxProps {
 }
 
 /**
- * Same interface as the Voicebox original; native control underneath.
+ * Checkbox with a native control underneath.
  *
- * The original was a `<button role="checkbox">`. A real `<input type="checkbox">`
+ * A real `<input type="checkbox">`, not a `<button role="checkbox">`,
  * gets form participation, the platform's own focus and announcement behaviour,
  * and works with `<label for>` for free. The visible box stays 16px, while the
  * input is stretched to a 44px hit area so the touch target meets the minimum

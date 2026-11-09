@@ -1,18 +1,10 @@
-# Dependencies
+# Dependencies and build output
 node_modules
-bun.lockb
-
-# Build outputs
 dist
-target
-.tauri
 
-# Generated files
-app/src/lib/api
-
-# Config files (don't lint/format)
+# Config files (not linted/formatted)
 *.config.js
 *.config.ts
 
-# Tailwind CSS files (contains @tailwind directives)
+# Tailwind entry (uses @theme/@apply directives)
 **/index.css
