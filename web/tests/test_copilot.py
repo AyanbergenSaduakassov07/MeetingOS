@@ -23,10 +23,17 @@ def completed_meeting_id(page) -> str:
     for meeting in page.request.get(f"{BASE}/api/meetings").json():
         if meeting["status"] != "completed":
             continue
-        intel = page.request.get(f"{BASE}/api/meetings/{meeting['id']}/intelligence").json()
-        if any(intel.get(kind) for kind in ("decisions", "action_items", "risks", "commitments")):
+        intel = page.request.get(
+            f"{BASE}/api/meetings/{meeting['id']}/intelligence"
+        ).json()
+        if any(
+            intel.get(kind)
+            for kind in ("decisions", "action_items", "risks", "commitments")
+        ):
             return meeting["id"]
-    raise AssertionError("No completed meeting with extracted intelligence to ask about.")
+    raise AssertionError(
+        "No completed meeting with extracted intelligence to ask about."
+    )
 
 
 def stub_ask(page, payload: dict) -> None:
@@ -79,7 +86,9 @@ def test_cited_answer_renders_with_clickable_timestamp(page) -> None:
     answer = page.locator('[data-testid="copilot-answer"]')
     expect(answer).to_be_visible(timeout=10_000)
     assert "money has not cleared" in answer.inner_text()
-    expect(page.locator('[data-role="assistant"][data-state="grounded"]')).to_be_visible()
+    expect(
+        page.locator('[data-role="assistant"][data-state="grounded"]')
+    ).to_be_visible()
     print("  ✓ cited answer rendered")
 
     # Budget: it answered from a subset, not the whole transcript.
@@ -87,14 +96,16 @@ def test_cited_answer_renders_with_clickable_timestamp(page) -> None:
     print(f"  ✓ answered from 3 of {len(segments)} segments")
 
     # The citation is the same clickable-timestamp component as an item card.
-    citation = page.locator('[data-role="assistant"] [data-testid="citation-time"]').first
+    citation = page.locator(
+        '[data-role="assistant"] [data-testid="citation-time"]'
+    ).first
     expect(citation).to_be_visible()
     target_ms = int(citation.get_attribute("data-ms"))
     assert target_ms == sponsor["start_ms"]
 
-    expect(page.locator('[data-testid="player-bar"][data-ready="true"]')).to_be_attached(
-        timeout=30_000
-    )
+    expect(
+        page.locator('[data-testid="player-bar"][data-ready="true"]')
+    ).to_be_attached(timeout=30_000)
     citation.click()
     page.wait_for_function(
         """(expected) => {
@@ -104,7 +115,9 @@ def test_cited_answer_renders_with_clickable_timestamp(page) -> None:
         arg=target_ms,
         timeout=10_000,
     )
-    position = int(page.locator('[data-testid="player-bar"]').get_attribute("data-position-ms"))
+    position = int(
+        page.locator('[data-testid="player-bar"]').get_attribute("data-position-ms")
+    )
     print(f"  ✓ copilot citation seeked audio to {position}ms")
 
     SHOTS.mkdir(parents=True, exist_ok=True)
@@ -137,7 +150,10 @@ def test_unanswerable_question_says_not_discussed(page) -> None:
     text = bubble.inner_text().lower()
     assert "not discussed" in text or "не обсуждалось" in text
     # The refusal must not be dressed up as an answer with citations.
-    assert page.locator('[data-role="assistant"] [data-testid="citation-time"]').count() == 0
+    assert (
+        page.locator('[data-role="assistant"] [data-testid="citation-time"]').count()
+        == 0
+    )
     print("  ✓ unanswerable question refused honestly, with no citations")
 
     SHOTS.mkdir(parents=True, exist_ok=True)
@@ -186,7 +202,7 @@ def main() -> int:
                 print(f"\n{test.__name__}")
                 try:
                     test(page)
-                except Exception as exc:
+                except Exception as exc:  # noqa: BLE001 - reported below, not swallowed
                     failures.append(f"{test.__name__}: {exc}")
                     print(f"  ✗ {exc}")
         finally:

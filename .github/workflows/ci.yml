@@ -19,6 +19,9 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
+      - name: Lint
+        run: bun run lint
+
       - name: Typecheck app + web
         run: bun run typecheck
 
@@ -27,6 +30,10 @@ jobs:
 
   backend-quality:
     runs-on: ubuntu-latest
+    # Job-level so the eval gate's `if` can see it; step-level env is not
+    # visible to that step's own condition.
+    env:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
 
     steps:
       - uses: actions/checkout@v4
@@ -40,7 +47,10 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r backend/requirements.txt
-          pip install pytest pytest-asyncio
+          pip install pytest pytest-asyncio ruff
+
+      - name: Lint
+        run: ruff check backend web/tests
 
       - name: Tests
         run: python -m pytest backend/tests -q
@@ -55,6 +65,51 @@ jobs:
         # faked, because an eval that cannot call the model has nothing to say.
         if: ${{ env.OPENAI_API_KEY != '' }}
         env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           AI_PROVIDER: openai
         run: python -m backend.eval.run_eval --ci --comparator --crosslingual --data-dir "$RUNNER_TEMP/evaldb"
+
+  web-e2e:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - uses: oven-sh/setup-bun@v2
+
+      - name: Install dependencies
+        run: |
+          pip install -r backend/requirements.txt playwright
+          python -m playwright install --with-deps chromium
+          bun install --frozen-lockfile
+
+      - name: Seed demo data and start the stack
+        # No .env and no key: the server binds loopback only, so auth is off.
+        run: |
+          python -m backend.seed_demo --data-dir "$RUNNER_TEMP/e2e-data"
+          nohup python -m backend.main --data-dir "$RUNNER_TEMP/e2e-data" > "$RUNNER_TEMP/api.log" 2>&1 &
+          (cd web && nohup bun run dev --host 127.0.0.1 --port 5173 > "$RUNNER_TEMP/vite.log" 2>&1 &)
+          for i in $(seq 60); do
+            curl -sf http://127.0.0.1:8470/health > /dev/null && curl -sf http://127.0.0.1:5173/ > /dev/null && exit 0
+            sleep 1
+          done
+          cat "$RUNNER_TEMP/api.log" "$RUNNER_TEMP/vite.log"
+          exit 1
+
+      - name: Playwright tests
+        run: |
+          status=0
+          for t in web/tests/test_*.py; do echo "== $t"; python "$t" || status=1; done
+          exit $status
+
+      - name: Upload screenshots and logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-e2e
+          path: |
+            web/tests/screenshots
+            ${{ runner.temp }}/*.log

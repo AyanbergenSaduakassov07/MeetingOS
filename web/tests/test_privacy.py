@@ -28,7 +28,9 @@ def privacy_json(page) -> dict:
 def open_page(page) -> None:
     page.goto(f"{BASE}/settings/privacy")
     page.wait_for_load_state("networkidle")
-    expect(page.locator('[data-testid="privacy-settings"]')).to_be_visible(timeout=15_000)
+    expect(page.locator('[data-testid="privacy-settings"]')).to_be_visible(
+        timeout=15_000
+    )
 
 
 def test_page_loads_and_lists_every_provider(page) -> None:
@@ -42,7 +44,9 @@ def test_page_loads_and_lists_every_provider(page) -> None:
 
     # Cloud vs local is the one distinction an operator reads first; it must
     # come from the API, not from a hardcoded label.
-    rendered = [rows.nth(i).get_attribute("data-cloud") == "true" for i in range(rows.count())]
+    rendered = [
+        rows.nth(i).get_attribute("data-cloud") == "true" for i in range(rows.count())
+    ]
     assert rendered == [p["is_cloud"] for p in api["providers"]]
     print(f"  ✓ {rows.count()} provider(s) listed, cloud/local flags match the API")
 
@@ -58,11 +62,16 @@ def test_rule_list_matches_the_active_config(page) -> None:
     )
 
     shown = {
-        toggles.nth(i).get_attribute("data-rule"): toggles.nth(i).get_attribute("data-enabled") == "true"
+        toggles.nth(i).get_attribute("data-rule"): toggles.nth(i).get_attribute(
+            "data-enabled"
+        )
+        == "true"
         for i in range(toggles.count())
     }
     expected = {rule["name"]: rule["enabled"] for rule in api["rules"]}
-    assert shown == expected, f"rule states drifted: {set(shown.items()) ^ set(expected.items())}"
+    assert shown == expected, (
+        f"rule states drifted: {set(shown.items()) ^ set(expected.items())}"
+    )
 
     master = page.locator('[data-testid="redaction-toggle"]')
     assert (master.get_attribute("data-enabled") == "true") == api["enabled"]
@@ -80,7 +89,10 @@ def test_rules_do_not_look_live_when_redaction_is_off(page) -> None:
     api = privacy_json(page)["redaction"]
     toggles = page.locator('[data-testid="rule-toggle"]')
 
-    running = [toggles.nth(i).get_attribute("data-running") == "true" for i in range(toggles.count())]
+    running = [
+        toggles.nth(i).get_attribute("data-running") == "true"
+        for i in range(toggles.count())
+    ]
     if api["enabled"]:
         assert running == [r["enabled"] for r in api["rules"]]
         assert page.locator('[data-testid="rules-inert-notice"]').count() == 0
@@ -90,7 +102,9 @@ def test_rules_do_not_look_live_when_redaction_is_off(page) -> None:
         notice = page.locator('[data-testid="rules-inert-notice"]')
         expect(notice).to_be_visible()
         assert notice.inner_text().strip()
-        print(f"  ✓ redaction off: no rule looks live, notice shown — {notice.inner_text()[:60]!r}")
+        print(
+            f"  ✓ redaction off: no rule looks live, notice shown — {notice.inner_text()[:60]!r}"
+        )
 
 
 def test_limitations_are_stated_not_buried(page) -> None:
