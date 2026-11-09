@@ -41,7 +41,7 @@ from .models import (
     VerificationStatus,
     Visibility,
 )
-from .session import get_db, init_db, new_session
+from .session import ensure_default_org, get_db, init_db, new_session
 
 # ``engine``, ``SessionLocal``, and ``_db_path`` are deliberately NOT imported
 # by value: ``init_db`` rebinds them inside ``session``, and a value imported
@@ -60,6 +60,7 @@ def __getattr__(name: str):
 
 
 __all__ = [
+    "ensure_default_org",
     "DocumentChunk",
     "Evidence",
     "EvidenceCitation",

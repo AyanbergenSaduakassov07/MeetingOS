@@ -7,7 +7,7 @@ from sqlalchemy.orm import sessionmaker
 
 from .. import config
 from .migrations import run_migrations
-from .models import Base
+from .models import Base, Organization
 
 logger = logging.getLogger(__name__)
 
@@ -44,6 +44,22 @@ def init_db() -> None:
     Base.metadata.create_all(bind=engine)
 
     logger.info("Database ready: %s", _db_path)
+
+
+def ensure_default_org() -> None:
+    """Give a fresh install one organization, so the first upload has an owner.
+
+    Only when the database has none: an install that already holds orgs is
+    left exactly as it is, and the routes keep refusing to guess among several.
+    """
+    db = new_session()
+    try:
+        if db.query(Organization).first() is None:
+            db.add(Organization(name="My team", slug="default"))
+            db.commit()
+            logger.info("Created the default organization")
+    finally:
+        db.close()
 
 
 def new_session():

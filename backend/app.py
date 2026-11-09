@@ -187,6 +187,7 @@ async def _run_startup(application: FastAPI) -> None:
     )
 
     database.init_db()
+    database.ensure_default_org()
     logger.info("Data directory: %s", config.get_data_dir())
 
     _log_provider_selection()
