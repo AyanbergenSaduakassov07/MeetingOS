@@ -176,7 +176,7 @@ def test_upload_endpoint_is_rate_limited(data_dir, db, monkeypatch):
             client.post(
                 "/api/meetings/upload",
                 files={"file": ("a.wav", b"\x00" * 128, "audio/wav")},
-                data={"title": "t"},
+                data={"title": "t", "consent_confirmed": "true"},
             ).status_code
             for _ in range(4)
         ]

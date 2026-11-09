@@ -29,7 +29,9 @@ from backend.meetings.commitments import (
     person_commitments,
 )
 
-NOW = datetime(2026, 9, 7, 12, 0, tzinfo=UTC)
+# Anchored to the real clock: the endpoint tests go through routes that use
+# datetime.now(), so a fixed date silently turns "due in 9 days" into overdue.
+NOW = datetime.now(UTC).replace(minute=0, second=0, microsecond=0)
 
 
 @pytest.fixture
@@ -149,7 +151,7 @@ def test_days_overdue_is_reported():
 
 def test_naive_datetime_from_sqlite_does_not_raise():
     """SQLite returns naive datetimes; comparing them must not blow up."""
-    overdue, _ = compute_overdue("commitment", "pending", datetime(2026, 1, 1), now=NOW)
+    overdue, _ = compute_overdue("commitment", "pending", (NOW - timedelta(days=30)).replace(tzinfo=None), now=NOW)
     assert overdue is True
 
 

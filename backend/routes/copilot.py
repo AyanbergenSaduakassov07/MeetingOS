@@ -7,7 +7,7 @@ asks, not just questions about that source. The defenses live in
 ``backend/memory/org_copilot.py``; this module is the HTTP edge.
 
 Rate limited on the same bucket as the per-meeting copilot: each call costs an
-embedding plus a generation, and neither endpoint is authenticated yet.
+embedding plus a generation, and one shared API key does not identify the caller.
 """
 
 from __future__ import annotations
@@ -71,8 +71,8 @@ class OrgAskResponse(BaseModel):
 def _resolve_org_id(db: Session, org_id: str | None) -> str:
     """The organisation to search, refusing to search someone else's.
 
-    ``org_id`` arrives in the request body and nothing authenticates the
-    caller, so on a multi-tenant install this one parameter reads a whole
+    ``org_id`` arrives in the request body and the shared API key does not
+    bind a caller to an org, so on a multi-tenant install this one parameter reads a whole
     tenant's corpus. Real authentication and a server-side binding are the fix
     and are not built here; ``MEETINGOS_ORG_ID`` is the control that works
     without them. When it is set this process serves exactly one organisation

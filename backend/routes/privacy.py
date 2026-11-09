@@ -20,6 +20,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from .. import config as app_config
+from ..auth import configured_key
 from ..database import Organization, ProviderCall, get_db
 from ..meetings import redaction
 from ..meetings.egress_log import LOCAL_HOSTS, host_of
@@ -206,10 +207,20 @@ def _residency_info() -> DataResidencyInfo:
             "disk encryption is the operator's responsibility.",
             "Customer-managed keys and a full on-prem provider swap are not "
             "implemented. That is the v1 enterprise milestone, not this pass.",
-            "No endpoint is authenticated. Set MEETINGOS_ORG_ID to pin this "
-            "process to one organization; without it, any caller who can reach "
-            "the port can name any org_id.",
+            _access_note(),
         ],
+    )
+
+
+def _access_note() -> str:
+    if configured_key() is None:
+        return (
+            "No API key is set: anything that can reach this port can read every meeting. "
+            "Set MEETINGOS_API_KEY before exposing it beyond this machine."
+        )
+    return (
+        "Access requires MEETINGOS_API_KEY. It is one shared key, so everyone holding it "
+        "sees every meeting; per-user accounts are on the roadmap."
     )
 
 

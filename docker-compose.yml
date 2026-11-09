@@ -1,47 +1,13 @@
-# Voicebox — CPU build (default)
-# For AMD ROCm GPU acceleration use the overlay:
-#   docker compose -f docker-compose.yml -f docker-compose.rocm.yml up --build
-
 services:
-  voicebox:
+  meetingos:
     build: .
-    container_name: voicebox
+    container_name: meetingos
     restart: unless-stopped
-
     ports:
-      # Host-side moved to 17600 so the dev/installed Voicebox can keep 17493.
-      # Container still listens on its native port internally.
-      - "127.0.0.1:17600:17493"
-
+      - "127.0.0.1:8470:8470"
+    env_file: .env
     volumes:
-      # Bind-mount for generated audio (customize the host path as needed)
-      # Host side:      ./output/
-      # Container side: /app/data/generations/
-      - ./output:/app/data/generations
-
-      # Named volume for profiles, DB, cache (persists across container restarts)
-      - voicebox-data:/app/data
-
-      # HuggingFace model cache (so models aren't re-downloaded on rebuild)
-      - huggingface-cache:/home/voicebox/.cache/huggingface
-
-    environment:
-      - LOG_LEVEL=info
-      - NUMBA_CACHE_DIR=/tmp/numba_cache
-
-    networks:
-      - voicebox-net
-
-    deploy:
-      resources:
-        limits:
-          cpus: '4'
-          memory: 8G
-
-networks:
-  voicebox-net:
-    driver: bridge
+      - meetingos-data:/app/data
 
 volumes:
-  voicebox-data:
-  huggingface-cache:
+  meetingos-data:

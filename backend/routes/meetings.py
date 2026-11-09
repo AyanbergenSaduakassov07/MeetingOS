@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import logging
 import os
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, status
@@ -90,6 +90,8 @@ class MeetingDetail(MeetingSummary):
     template_id: str | None = None
     created_by_id: str | None = None
     processing_error: str | None = None
+    consent_confirmed_at: datetime | None = None
+    consent_note: str | None = None
     updated_at: datetime | None = None
 
 
@@ -305,15 +307,26 @@ async def upload_meeting(
     title: str = Form(...),
     org_id: str | None = Form(None),
     language: str | None = Form(None),
+    consent_confirmed: bool = Form(False),
+    consent_note: str | None = Form(None, max_length=500),
     db: Session = Depends(get_db),
 ) -> Meeting:
     """Accept a recording and queue it for processing.
+
+    Refused unless ``consent_confirmed`` is true: the audio and transcript go to
+    a third-party API, and recording people who did not agree is the one
+    failure no later control can undo.
 
     Returns 202 with the meeting in ``processing`` as soon as the bytes are on
     disk. Transcription runs in the background — a meeting recording takes
     minutes to transcribe, which is far longer than any client will hold a
     request open.
     """
+    if not consent_confirmed:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="Confirm that everyone in the recording consented to it (consent_confirmed=true).",
+        )
     suffix = _validate_audio_suffix(file.filename)
     organization = _resolve_org(db, org_id)
 
@@ -323,6 +336,8 @@ async def upload_meeting(
         status=MeetingStatus.PROCESSING.value,
         source=MeetingSource.UPLOAD.value,
         language=language or "en",
+        consent_confirmed_at=datetime.now(UTC),
+        consent_note=(consent_note or "").strip() or None,
     )
     db.add(meeting)
     db.flush()  # assign the id that names the file on disk
