@@ -1,6 +1,6 @@
 [project]
-name = "voicebox-backend"
-version = "0.2.3"
+name = "meetingos"
+version = "0.2.0"
 requires-python = ">=3.12"
 
 # ---------------------------------------------------------------------------
@@ -14,11 +14,8 @@ src = ["."]
 
 # Files/dirs to skip entirely.
 #
-# Empty, and worth keeping empty. This used to exclude ~20 inherited Voicebox
-# modules carrying roughly 450 style findings — dead code that nothing imported
-# but that still had to be listed here so its lint noise did not bury findings
-# in live modules. The files are deleted, so the exclusions went with them.
-# Anything added back here is a place real findings can hide.
+# Empty, and worth keeping empty: anything listed here is a place real
+# findings can hide.
 extend-exclude = []
 
 [tool.ruff.lint]

@@ -278,6 +278,11 @@ class Meeting(Base):
     sentiment_score = Column(Float, nullable=True)
     processing_error = Column(Text, nullable=True)
 
+    # When the uploader confirmed every participant agreed to be recorded, and
+    # how ("verbal at start", "calendar notice"). Uploads without it are refused.
+    consent_confirmed_at = Column(DateTime(timezone=True), nullable=True)
+    consent_note = Column(String, nullable=True)
+
     created_at = Column(DateTime(timezone=True), default=_utcnow)
     updated_at = Column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow)
 

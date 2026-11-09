@@ -1,6 +1,6 @@
 """Column-level migrations for the MeetingOS SQLite database.
 
-Why not Alembic?  Inherited from voicebox, and still true for v0.1: the
+Why not Alembic?  At this size the
 column-existence checks below are idempotent, run in <50 ms on startup, and
 need no extra files to survive packaging.  ``Base.metadata.create_all`` in
 ``session.py`` handles *new* tables; this module handles changes to tables
@@ -234,6 +234,8 @@ def _migrate_documents(engine, inspector, tables: set[str]) -> None:
     _ensure_column(engine, inspector, tables, "documents", "language", "language VARCHAR")
     _ensure_column(engine, inspector, tables, "documents", "is_sensitive", "is_sensitive BOOLEAN DEFAULT 0")
     _ensure_column(engine, inspector, tables, "documents", "updated_at", "updated_at DATETIME")
+    _ensure_column(engine, inspector, tables, "meetings", "consent_confirmed_at", "consent_confirmed_at DATETIME")
+    _ensure_column(engine, inspector, tables, "meetings", "consent_note", "consent_note VARCHAR")
     # transcript_segments.language already exists in the model; this covers
     # databases created before it was declared.
     _ensure_column(engine, inspector, tables, "transcript_segments", "language", "language VARCHAR")

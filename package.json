@@ -1,29 +1,6 @@
 {
-  "name": "voicebox",
-  "version": "0.1.0",
-  "private": true,
-  "workspaces": [
-    "web"
-  ],
-  "scripts": {
-    "dev:web": "cd web && bun run dev",
-    "dev:server": "backend/venv/bin/python -m uvicorn backend.main:app --reload --port 17493",
-    "setup:dev": "bun run scripts/setup-dev-sidecar.js",
-    "build:web": "cd web && bun run build",
-    "build:release": "./scripts/prepare-release.sh",
-    "generate:api": "./scripts/generate-api.sh",
-    "build:server": "./scripts/build-server.sh",
-    "update:icons": "./scripts/update-icons.sh",
-    "convert:assets": "./scripts/convert-assets.sh",
-    "lint": "biome lint web/src",
-    "typecheck": "cd web && bunx tsc --noEmit",
-    "lint:fix": "biome lint --write .",
-    "format": "biome format --write web/src backend/tests/eval_cases",
-    "format:check": "biome format .",
-    "check": "biome check web/src backend/tests/eval_cases",
-    "check:fix": "biome check --write .",
-    "ci": "bun run typecheck && bun run build:web"
-  },
+  "name": "meetingos",
+  "version": "0.2.0",
   "devDependencies": {
     "@biomejs/biome": "2.3.12",
     "@types/node": "^20.0.0",
@@ -34,8 +11,19 @@
     "bun": ">=1.0.0"
   },
   "packageManager": "bun@1.3.8",
-  "dependencies": {
-    "loaders.css": "^0.1.2",
-    "react-loaders": "^3.0.1"
-  }
+  "private": true,
+  "scripts": {
+    "dev:web": "cd web && bun run dev",
+    "dev:server": ".venv/bin/python -m uvicorn backend.main:app --reload --port 8470",
+    "build:web": "cd web && bun run build",
+    "lint": "biome lint web/src",
+    "typecheck": "cd web && bunx tsc --noEmit",
+    "format": "biome format --write web/src backend/tests/eval_cases",
+    "check": "biome check web/src backend/tests/eval_cases",
+    "check:fix": "biome check --write web/src backend/tests/eval_cases",
+    "ci": "bun run typecheck && bun run build:web"
+  },
+  "workspaces": [
+    "web"
+  ]
 }

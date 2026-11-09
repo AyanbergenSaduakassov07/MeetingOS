@@ -4,8 +4,8 @@
 
 /* MeetingOS design tokens.
  *
- * Variable names are inherited from Voicebox so the ported shadcn/ui
- * components keep working unchanged; every value is new.
+ * Variable names follow the shadcn/ui convention so the components in
+ * components/ui read them unchanged.
  *
  * Lime (--primary / --accent) is the brand signal and carries no status
  * meaning. Status lives in --good and --warn, which is why they are separate
