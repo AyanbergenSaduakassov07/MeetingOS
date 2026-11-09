@@ -36,7 +36,7 @@ Goal: more than one person, more than one team, on one install.
 - [ ] Every route scoped to the caller's organization, not just the copilot and MCP
 - [ ] Per-user API tokens for agents, revocable
 - [ ] Audit log of who listened to or exported what
-- [ ] Local-only mode: faster-whisper transcription plus an Ollama model, so no audio leaves the machine
+- [ ] Local-only mode: faster-whisper transcription (done: `TRANSCRIPTION_PROVIDER=faster_whisper`) plus an Ollama model, so no audio leaves the machine
 
 ## v1.0: Ship
 

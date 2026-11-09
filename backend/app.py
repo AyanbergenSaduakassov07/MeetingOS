@@ -223,7 +223,7 @@ def _log_provider_selection() -> None:
             "Transcription provider: %s (%s)%s",
             transcriber.config.name,
             transcriber.config.model,
-            "" if transcriber.is_configured() else f" — {transcriber.config.api_key_env} not set",
+            "" if transcriber.is_configured() else f" — {transcriber.config.api_key_env or 'dependency'} not set",
         )
     except Exception as exc:
         logger.warning("Transcription provider unavailable: %s", exc)

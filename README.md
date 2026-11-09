@@ -84,7 +84,7 @@ Known limits: one shared key, not per-user accounts; routes are not yet scoped p
 | Job | Options (`.env`) |
 |---|---|
 | Language model | `AI_PROVIDER=anthropic` (default, `claude-opus-5-5`), `openai`, `openai_compatible` (Ollama, vLLM, OpenRouter) |
-| Transcription | `TRANSCRIPTION_PROVIDER=whisper_cloud` (default), `assemblyai`, `pyannote_local` |
+| Transcription | `TRANSCRIPTION_PROVIDER=whisper_cloud` (default), `assemblyai`, `faster_whisper` (local, no audio leaves the machine) |
 | Embeddings | OpenAI or any OpenAI-compatible endpoint |
 
 ## Connect an agent (MCP)

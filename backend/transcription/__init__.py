@@ -20,6 +20,7 @@ from .base import (
     merge_diarization,
 )
 from .providers.assemblyai_provider import AssemblyAIProvider
+from .providers.faster_whisper_provider import FasterWhisperProvider
 from .providers.pyannote_local_provider import PyannoteLocalProvider
 from .providers.whisper_cloud_provider import WhisperCloudProvider
 
@@ -30,6 +31,7 @@ DEFAULT_PROVIDER = "whisper_cloud"
 PROVIDERS: dict[str, type[TranscriptionProvider]] = {
     "whisper_cloud": WhisperCloudProvider,
     "assemblyai": AssemblyAIProvider,
+    "faster_whisper": FasterWhisperProvider,
     "pyannote_local": PyannoteLocalProvider,
 }
 
@@ -60,6 +62,7 @@ def reset_providers() -> None:
 __all__ = [
     "AssemblyAIProvider",
     "DiarizationResult",
+    "FasterWhisperProvider",
     "PyannoteLocalProvider",
     "SpeakerTurn",
     "TranscribedSegment",
