@@ -37,6 +37,8 @@ export interface MeetingDetail extends MeetingSummary {
   summary: string | null;
   sentiment_score: number | null;
   processing_error: string | null;
+  consent_confirmed_at: string | null;
+  consent_note: string | null;
   updated_at: string | null;
 }
 
@@ -265,24 +267,50 @@ export class ApiError extends Error {
   }
 }
 
-async function get<T>(path: string): Promise<T> {
-  const response = await fetch(`${BASE}${path}`, { headers: { Accept: 'application/json' } });
+/** Fired on any 401 so the app can drop back to the sign-in screen. */
+export const UNAUTHORIZED_EVENT = 'meetingos:unauthorized';
+
+async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
+  const response = await fetch(`${BASE}${path}`, {
+    credentials: 'same-origin',
+    ...init,
+    headers: { Accept: 'application/json', ...init.headers },
+  });
+  if (response.status === 401) window.dispatchEvent(new Event(UNAUTHORIZED_EVENT));
   if (!response.ok) {
-    // The backend returns {"detail": "..."} on error; fall back to the status
-    // line when it returns something else (a proxy error page, say).
+    // The backend returns {"detail": "..."}; fall back to the status line when
+    // something else answers (a proxy error page, say).
     let detail = response.statusText;
     try {
       const body = (await response.json()) as { detail?: string };
-      if (body.detail) detail = body.detail;
+      if (typeof body.detail === 'string') detail = body.detail;
     } catch {
       /* keep statusText */
     }
     throw new ApiError(response.status, detail);
   }
+  if (response.status === 204) return undefined as T;
   return (await response.json()) as T;
 }
 
+const get = <T>(path: string) => request<T>(path);
+const sendJson = <T>(method: string, path: string, body: unknown) =>
+  request<T>(path, {
+    method,
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+
+export interface Session {
+  auth_required: boolean;
+  authenticated: boolean;
+}
+
 export const api = {
+  getSession: () => get<Session>('/api/session'),
+  login: (apiKey: string) => sendJson<void>('POST', '/api/session', { api_key: apiKey }),
+  logout: () => request<void>('/api/session', { method: 'DELETE' }),
+
   listMeetings: () => get<MeetingSummary[]>('/api/meetings'),
   getMeeting: (id: string) => get<MeetingDetail>(`/api/meetings/${id}`),
   getIntelligence: (id: string) => get<MeetingIntelligence>(`/api/meetings/${id}/intelligence`),
@@ -290,52 +318,19 @@ export const api = {
   audioUrl: (id: string) => `${BASE}/api/meetings/${id}/audio`,
   getDashboard: (periodDays = 90) => get<Dashboard>(`/api/dashboard?period_days=${periodDays}`),
   getPrivacy: () => get<Privacy>('/api/privacy'),
-  async updateRedaction(enabled: boolean, rules: string[]): Promise<RedactionInfo> {
-    const response = await fetch(`${BASE}/api/privacy/redaction`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ enabled, rules }),
-    });
-    if (!response.ok) throw new ApiError(response.status, response.statusText);
-    return (await response.json()) as RedactionInfo;
-  },
+  updateRedaction: (enabled: boolean, rules: string[]) =>
+    sendJson<RedactionInfo>('PUT', '/api/privacy/redaction', { enabled, rules }),
   listCommitments: (params: Record<string, string> = {}) =>
     get<CommitmentList>(`/api/commitments?${new URLSearchParams(params)}`),
+  ask: (id: string, question: string) =>
+    sendJson<AskResponse>('POST', `/api/meetings/${id}/ask`, { question }),
 
-  async ask(id: string, question: string): Promise<AskResponse> {
-    const response = await fetch(`${BASE}/api/meetings/${id}/ask`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ question }),
-    });
-    if (!response.ok) {
-      let detail = response.statusText;
-      try {
-        const body = (await response.json()) as { detail?: string };
-        if (body.detail) detail = body.detail;
-      } catch {
-        /* keep statusText */
-      }
-      throw new ApiError(response.status, detail);
-    }
-    return (await response.json()) as AskResponse;
-  },
-
-  async uploadMeeting(file: File, title: string): Promise<MeetingDetail> {
+  uploadMeeting(file: File, title: string, consentNote: string): Promise<MeetingDetail> {
     const form = new FormData();
     form.append('file', file);
     form.append('title', title);
-    const response = await fetch(`${BASE}/api/meetings/upload`, { method: 'POST', body: form });
-    if (!response.ok) {
-      let detail = response.statusText;
-      try {
-        const body = (await response.json()) as { detail?: string };
-        if (body.detail) detail = body.detail;
-      } catch {
-        /* keep statusText */
-      }
-      throw new ApiError(response.status, detail);
-    }
-    return (await response.json()) as MeetingDetail;
+    form.append('consent_confirmed', 'true');
+    if (consentNote.trim()) form.append('consent_note', consentNote.trim());
+    return request<MeetingDetail>('/api/meetings/upload', { method: 'POST', body: form });
   },
 };

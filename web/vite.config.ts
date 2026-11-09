@@ -15,7 +15,7 @@ export default defineConfig({
     // same-origin relative URLs in dev and in the built bundle alike.
     proxy: {
       '/api': {
-        target: process.env.VITE_PROXY_TARGET ?? 'http://127.0.0.1:17493',
+        target: process.env.VITE_PROXY_TARGET ?? 'http://127.0.0.1:8470',
         changeOrigin: true,
       },
     },

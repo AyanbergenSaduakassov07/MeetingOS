@@ -3,6 +3,7 @@ import { AlertCircle, Loader2, Upload } from 'lucide-react';
 import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from 'react-router-dom';
+import { ConsentDialog } from '@/components/ConsentDialog';
 import { api } from '@/lib/api';
 import { formatTimestamp } from '@/lib/playback';
 import { cn } from '@/lib/utils';
@@ -20,11 +21,13 @@ export function MeetingsList() {
   const queryClient = useQueryClient();
   const fileRef = useRef<HTMLInputElement>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
 
   const meetings = useQuery({ queryKey: ['meetings'], queryFn: api.listMeetings });
 
   const upload = useMutation({
-    mutationFn: (file: File) => api.uploadMeeting(file, file.name.replace(/\.[^.]+$/, '')),
+    mutationFn: ({ file, note }: { file: File; note: string }) =>
+      api.uploadMeeting(file, file.name.replace(/\.[^.]+$/, ''), note),
     onSuccess: async (meeting) => {
       setUploadError(null);
       await queryClient.invalidateQueries({ queryKey: ['meetings'] });
@@ -48,7 +51,7 @@ export function MeetingsList() {
             data-testid="upload-input"
             onChange={(event) => {
               const file = event.target.files?.[0];
-              if (file) upload.mutate(file);
+              if (file) setPendingFile(file);
               event.target.value = '';
             }}
           />
@@ -68,6 +71,15 @@ export function MeetingsList() {
           </button>
         </div>
       </div>
+
+      <ConsentDialog
+        file={pendingFile}
+        onCancel={() => setPendingFile(null)}
+        onConfirm={(file, note) => {
+          setPendingFile(null);
+          upload.mutate({ file, note });
+        }}
+      />
 
       {uploadError && (
         <p
