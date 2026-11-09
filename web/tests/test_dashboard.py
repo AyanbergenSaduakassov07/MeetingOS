@@ -47,15 +47,21 @@ def test_every_stat_matches_a_direct_api_query(page) -> None:
 
     api = dashboard_json(page)
     for testid, field in STAT_FIELDS.items():
-        rendered = int(page.locator(f'[data-testid="{testid}"]').get_attribute("data-value"))
+        rendered = int(
+            page.locator(f'[data-testid="{testid}"]').get_attribute("data-value")
+        )
         expected = api[field]["value"]
-        assert rendered == expected, f"{testid}: UI shows {rendered}, API says {expected}"
+        assert rendered == expected, (
+            f"{testid}: UI shows {rendered}, API says {expected}"
+        )
     print("  ✓ all 5 stat values match the API")
 
     # And the overdue count is independently reproducible from the commitments
     # endpoint — the one the drill-through link actually hits.
     commitments = page.request.get(f"{BASE}/api/commitments?overdue=true").json()
-    overdue_stat = int(page.locator('[data-testid="stat-overdue"]').get_attribute("data-value"))
+    overdue_stat = int(
+        page.locator('[data-testid="stat-overdue"]').get_attribute("data-value")
+    )
     assert overdue_stat == commitments["total"], (
         f"dashboard says {overdue_stat} overdue, /api/commitments returns {commitments['total']}"
     )
@@ -76,13 +82,19 @@ def test_every_stat_links_through_to_real_records(page) -> None:
 
     # Follow the overdue one end to end: it must land on the filtered list and
     # that list must hold the same number of rows the card claimed.
-    expected = int(page.locator('[data-testid="stat-overdue"]').get_attribute("data-value"))
+    expected = int(
+        page.locator('[data-testid="stat-overdue"]').get_attribute("data-value")
+    )
     page.locator('[data-testid="stat-overdue"]').click()
     page.wait_for_url("**/commitments**", timeout=10_000)
-    expect(page.locator('[data-testid="commitments-total"]')).to_be_visible(timeout=10_000)
+    expect(page.locator('[data-testid="commitments-total"]')).to_be_visible(
+        timeout=10_000
+    )
 
     assert "overdue=true" in page.url, f"filter lost in navigation: {page.url}"
-    landed = int(page.locator('[data-testid="commitments-total"]').get_attribute("data-value"))
+    landed = int(
+        page.locator('[data-testid="commitments-total"]').get_attribute("data-value")
+    )
     assert landed == expected, f"card said {expected}, filtered list shows {landed}"
 
     if expected:
@@ -115,7 +127,9 @@ def completed_meeting_with_low_confidence(page) -> str | None:
     for meeting in page.request.get(f"{BASE}/api/meetings").json():
         if meeting["status"] != "completed":
             continue
-        intel = page.request.get(f"{BASE}/api/meetings/{meeting['id']}/intelligence").json()
+        intel = page.request.get(
+            f"{BASE}/api/meetings/{meeting['id']}/intelligence"
+        ).json()
         for kind in ("decisions", "action_items", "risks", "commitments"):
             for item in intel.get(kind) or []:
                 if item["verification_status"] in ("low_confidence", "unsupported"):
@@ -148,7 +162,9 @@ def test_low_confidence_item_shows_a_warning_not_a_normal_card(page) -> None:
     clean = page.locator('[data-testid="item-card"][data-verification="verified"]')
     if clean.count():
         assert clean.first.locator('[data-testid="attention-banner"]').count() == 0
-        print("  ✓ verified cards carry no banner, so the warning still means something")
+        print(
+            "  ✓ verified cards carry no banner, so the warning still means something"
+        )
 
     # And the item is present, not hidden — the Phase 3 principle.
     assert flagged.count() >= 1
@@ -174,8 +190,13 @@ def test_verification_score_is_surfaced_on_cards(page) -> None:
         for d in api["decisions"]
         if d["verification_score"] is not None
     }
-    shown = {round(float(scores.nth(i).get_attribute("data-score")), 4) for i in range(scores.count())}
-    assert shown <= api_scores, f"UI showed scores the API does not have: {shown - api_scores}"
+    shown = {
+        round(float(scores.nth(i).get_attribute("data-score")), 4)
+        for i in range(scores.count())
+    }
+    assert shown <= api_scores, (
+        f"UI showed scores the API does not have: {shown - api_scores}"
+    )
     print(f"  ✓ {len(shown)} verification score(s) match the API")
 
 
@@ -192,7 +213,9 @@ def test_dashboard_quality_indicator_matches_the_api(page) -> None:
 
     if expected_attention:
         expect(page.locator('[data-testid="quality-warning"]')).to_be_visible()
-        print(f"  ✓ quality indicator flags {expected_attention} item(s) needing review")
+        print(
+            f"  ✓ quality indicator flags {expected_attention} item(s) needing review"
+        )
     else:
         print("  ✓ quality indicator matches API (nothing needs review)")
 
@@ -218,7 +241,7 @@ def main() -> int:
                 print(f"\n{test.__name__}")
                 try:
                     test(page)
-                except Exception as exc:
+                except Exception as exc:  # noqa: BLE001 - reported below, not swallowed
                     failures.append(f"{test.__name__}: {exc}")
                     print(f"  ✗ {exc}")
         finally:
