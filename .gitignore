@@ -8,6 +8,7 @@ __pycache__/
 # Build output
 dist/
 build/
+marketing-video/output/
 *.egg-info/
 
 # Tool caches

@@ -127,6 +127,7 @@ backend/
   eval/          frozen extraction cases and scorer
 web/             React + Vite + Tailwind UI; Playwright suites in web/tests
 docs/            roadmap, security review
+marketing-video/ 60 s Remotion launch film from real app footage (see its README)
 ```
 
 API reference: `http://127.0.0.1:8470/docs` while the server runs.
