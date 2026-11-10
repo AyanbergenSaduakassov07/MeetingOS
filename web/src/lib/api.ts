@@ -248,6 +248,48 @@ export interface AskResponse {
   segments_retrieved: number;
 }
 
+export interface OrgCitation {
+  record_type: string;
+  record_id: string;
+  text: string;
+  source_kind: 'meeting' | 'document' | string;
+  source_id: string | null;
+  source_title: string | null;
+  evidence_id: string | null;
+  verification_status: string | null;
+  start_ms: number | null;
+  language: string | null;
+  score: number;
+}
+
+export interface OrgAskResponse {
+  question: string;
+  answer: string;
+  citations: OrgCitation[];
+  not_discussed: boolean;
+  unsupported: boolean;
+  /** Zero means nothing is indexed, so "not discussed" would be a false claim. */
+  records_considered: number;
+  records_retrieved: number;
+  sources_spanned: number;
+  answer_language: string | null;
+}
+
+export interface LibraryDocument {
+  id: string;
+  org_id: string;
+  meeting_id: string | null;
+  title: string;
+  doc_type: string;
+  mime_type: string | null;
+  size_bytes: number | null;
+  language: string | null;
+  is_sensitive: boolean;
+  chunk_count: number;
+  indexed: boolean;
+  notes: string[];
+}
+
 export interface TranscriptSegment {
   id: string;
   sequence: number;
@@ -270,27 +312,70 @@ export class ApiError extends Error {
 /** Fired on any 401 so the app can drop back to the sign-in screen. */
 export const UNAUTHORIZED_EVENT = 'meetingos:unauthorized';
 
+async function ensureOk(response: Response): Promise<void> {
+  if (response.status === 401) window.dispatchEvent(new Event(UNAUTHORIZED_EVENT));
+  if (response.ok) return;
+  // The backend returns {"detail": "..."}; fall back to the status line when
+  // something else answers (a proxy error page, say).
+  let detail = response.statusText;
+  try {
+    const body = (await response.json()) as { detail?: string };
+    if (typeof body.detail === 'string') detail = body.detail;
+  } catch {
+    /* keep statusText */
+  }
+  throw new ApiError(response.status, detail);
+}
+
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   const response = await fetch(`${BASE}${path}`, {
     credentials: 'same-origin',
     ...init,
     headers: { Accept: 'application/json', ...init.headers },
   });
-  if (response.status === 401) window.dispatchEvent(new Event(UNAUTHORIZED_EVENT));
-  if (!response.ok) {
-    // The backend returns {"detail": "..."}; fall back to the status line when
-    // something else answers (a proxy error page, say).
-    let detail = response.statusText;
-    try {
-      const body = (await response.json()) as { detail?: string };
-      if (typeof body.detail === 'string') detail = body.detail;
-    } catch {
-      /* keep statusText */
-    }
-    throw new ApiError(response.status, detail);
-  }
+  await ensureOk(response);
   if (response.status === 204) return undefined as T;
   return (await response.json()) as T;
+}
+
+type AskStreamEvent =
+  | { type: 'partial'; text: string }
+  | { type: 'done'; response: AskResponse }
+  | { type: 'error'; detail: string };
+
+/** Reads the NDJSON answer stream: partial text as it is written, then the validated answer. */
+async function askStream(
+  id: string,
+  question: string,
+  onPartial: (text: string) => void,
+  signal?: AbortSignal,
+): Promise<AskResponse> {
+  const response = await fetch(`${BASE}/api/meetings/${id}/ask/stream`, {
+    method: 'POST',
+    credentials: 'same-origin',
+    headers: { 'Content-Type': 'application/json', Accept: 'application/x-ndjson' },
+    body: JSON.stringify({ question }),
+    signal,
+  });
+  await ensureOk(response);
+  if (!response.body) throw new ApiError(502, 'The answer stream was empty.');
+  const reader = response.body.pipeThrough(new TextDecoderStream()).getReader();
+  let buffer = '';
+  for (;;) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    buffer += value;
+    const lines = buffer.split('\n');
+    buffer = lines.pop() ?? '';
+    for (const line of lines) {
+      if (!line.trim()) continue;
+      const event = JSON.parse(line) as AskStreamEvent;
+      if (event.type === 'partial') onPartial(event.text);
+      else if (event.type === 'done') return event.response;
+      else throw new ApiError(503, event.detail);
+    }
+  }
+  throw new ApiError(502, 'The answer stream ended before the answer was complete.');
 }
 
 const get = <T>(path: string) => request<T>(path);
@@ -338,6 +423,20 @@ export const api = {
     ),
   ask: (id: string, question: string) =>
     sendJson<AskResponse>('POST', `/api/meetings/${id}/ask`, { question }),
+  askStream,
+  askOrg: (question: string, answerLanguage: string) =>
+    sendJson<OrgAskResponse>('POST', '/api/copilot/ask', {
+      question,
+      answer_language: answerLanguage,
+    }),
+  listDocuments: () => get<LibraryDocument[]>('/api/documents'),
+  uploadDocument(file: File, title: string, isSensitive: boolean): Promise<LibraryDocument> {
+    const form = new FormData();
+    form.append('file', file);
+    form.append('title', title);
+    form.append('is_sensitive', String(isSensitive));
+    return request<LibraryDocument>('/api/documents', { method: 'POST', body: form });
+  },
 
   uploadMeeting(
     file: File,

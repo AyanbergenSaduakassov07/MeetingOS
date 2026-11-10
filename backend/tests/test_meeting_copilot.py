@@ -487,3 +487,39 @@ async def test_a_trailing_list_of_ids_is_cited_and_removed_from_the_answer(db, m
 
     assert [citation.segment_id for citation in result.citations] == [cited]
     assert result.answer == "The sponsor money has not cleared."
+
+
+class StreamingLLM(FakeLLM):
+    """Hands the scripted reply back in small chunks, the way a streaming API does."""
+
+    async def generate_stream(self, prompt, *, system=None, max_tokens=None, temperature=None):
+        self.prompts.append((system, prompt))
+        for start in range(0, len(self.reply), 7):
+            yield self.reply[start : start + 7]
+
+
+@pytest.mark.asyncio
+async def test_streamed_answer_grows_as_plain_text_then_ends_with_the_grounded_answer(db, meeting):
+    cited = segment_id(db, meeting, 3)
+    reply = json.dumps({"answer": 'Priya said "not yet".\nSponsor money is late.', "segment_ids": [cited]})
+
+    events = [
+        event
+        async for event in copilot.stream_answer(
+            meeting.id, "Sponsor?", db=db, provider=StreamingLLM(reply), embedder=NoCreditsEmbedder()
+        )
+    ]
+
+    *partials, final = events
+    assert partials, "the answer must arrive in pieces"
+    assert all(isinstance(text, str) and "{" not in text and "segment_ids" not in text for text in partials)
+    assert partials[-1] == 'Priya said "not yet".\nSponsor money is late.'
+    assert isinstance(final, copilot.CopilotAnswer)
+    assert [citation.segment_id for citation in final.citations] == [cited]
+
+
+def test_partial_answer_waits_out_an_escape_split_across_chunks():
+    assert copilot.partial_answer('{"answer": "a\\') == "a"
+    assert copilot.partial_answer('{"answer": "a\\u04') == "a"
+    assert copilot.partial_answer('{"answer": "a\\u0436b", "segm') == "aжb"
+    assert copilot.partial_answer('{"ans') == ""

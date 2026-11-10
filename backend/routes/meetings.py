@@ -10,13 +10,14 @@ the shape is visible in the OpenAPI schema without pretending to work.
 
 from __future__ import annotations
 
+import json
 import logging
 import os
 from datetime import UTC, datetime
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, status
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.orm import Session
 
@@ -36,7 +37,7 @@ from ..database import (
     get_db,
 )
 from ..meetings.board import ensure_board_template, is_board_meeting, polish_minutes, render_minutes, to_markdown
-from ..meetings.copilot import CopilotError, answer_question
+from ..meetings.copilot import CopilotAnswer, CopilotError, answer_question, stream_answer
 from ..meetings.ingestion import schedule_processing
 from ..meetings.prepare import assemble_brief, write_brief
 from .limits import limit_ask, limit_upload
@@ -759,6 +760,10 @@ async def ask_meeting(meeting_id: str, payload: AskRequest) -> AskResponse:
         code = status.HTTP_404_NOT_FOUND if "not found" in message.lower() else status.HTTP_503_SERVICE_UNAVAILABLE
         raise HTTPException(status_code=code, detail=message) from exc
 
+    return _ask_response(result)
+
+
+def _ask_response(result: CopilotAnswer) -> AskResponse:
     return AskResponse(
         meeting_id=result.meeting_id,
         question=result.question,
@@ -778,6 +783,29 @@ async def ask_meeting(meeting_id: str, payload: AskRequest) -> AskResponse:
         segments_considered=result.segments_considered,
         segments_retrieved=result.segments_retrieved,
     )
+
+
+@router.post("/{meeting_id}/ask/stream", dependencies=[Depends(limit_ask)])
+async def ask_meeting_stream(meeting_id: str, payload: AskRequest) -> StreamingResponse:
+    """``/ask`` as NDJSON: ``{"type":"partial","text"}`` lines while the model writes,
+    then one ``{"type":"done","response"}`` (the same body ``/ask`` returns) or ``{"type":"error","detail"}``.
+
+    The partial text is display-only; citations and grounding flags exist only in ``done``.
+    """
+
+    async def events():
+        try:
+            async for event in stream_answer(meeting_id, payload.question):
+                if isinstance(event, CopilotAnswer):
+                    body = {"type": "done", "response": _ask_response(event).model_dump()}
+                else:
+                    body = {"type": "partial", "text": event}
+                yield json.dumps(body, ensure_ascii=False) + "\n"
+        except CopilotError as exc:
+            # Headers are already sent, so the failure travels as the last line instead of a status code.
+            yield json.dumps({"type": "error", "detail": str(exc)}, ensure_ascii=False) + "\n"
+
+    return StreamingResponse(events(), media_type="application/x-ndjson")
 
 
 @router.post("", response_model=MeetingDetail, status_code=status.HTTP_501_NOT_IMPLEMENTED)

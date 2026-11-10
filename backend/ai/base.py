@@ -24,6 +24,7 @@ import asyncio
 import logging
 import random
 from abc import ABC, abstractmethod
+from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
 from typing import Any, TypeVar
 
@@ -167,6 +168,20 @@ class LLMProvider(ABC):
         Providers without an embedding endpoint raise ``ProviderError``;
         check ``config.supports_embeddings`` before calling.
         """
+
+    # -- optional ----------------------------------------------------------
+
+    async def generate_stream(
+        self,
+        prompt: str,
+        *,
+        system: str | None = None,
+        max_tokens: int | None = None,
+        temperature: float | None = None,
+    ) -> AsyncIterator[str]:
+        """Text chunks as they arrive. Default: the whole ``generate`` text as one chunk."""
+        completion = await self.generate(prompt, system=system, max_tokens=max_tokens, temperature=temperature)
+        yield completion.text
 
     # -- shared ------------------------------------------------------------
 

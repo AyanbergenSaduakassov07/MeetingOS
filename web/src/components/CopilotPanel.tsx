@@ -8,6 +8,7 @@ import {
   Info,
   RotateCcw,
   Sparkles,
+  Square,
 } from 'lucide-react';
 import { Fragment, type ReactNode, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -18,12 +19,17 @@ import { CitationTime } from './CitationTime';
 interface Turn {
   id: string;
   question: string;
+  /** Answer text while it is still being written; display-only, not yet validated. */
+  partial?: string;
+  stopped?: boolean;
   response?: AskResponse;
   error?: string;
 }
 
 const SUGGESTIONS = ['copilot.suggest1', 'copilot.suggest2', 'copilot.suggest3'] as const;
 const MAX_INPUT_HEIGHT_PX = 160;
+const SEND_BUTTON =
+  'flex size-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring';
 
 /**
  * Meeting Copilot, laid out like a modern answer engine: sources first, then
@@ -46,20 +52,28 @@ export function CopilotPanel({ meetingId }: { meetingId: string }) {
   const [draft, setDraft] = useState('');
   const threadRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const abortRef = useRef<AbortController | null>(null);
+
+  const patchTurn = (id: string, patch: Partial<Turn>) =>
+    setTurns((current) => current.map((turn) => (turn.id === id ? { ...turn, ...patch } : turn)));
 
   const ask = useMutation({
-    mutationFn: ({ question }: { id: string; question: string }) => api.ask(meetingId, question),
-    onSuccess: (response, variables) =>
-      setTurns((current) =>
-        current.map((turn) => (turn.id === variables.id ? { ...turn, response } : turn)),
-      ),
-    onError: (error, variables) =>
-      setTurns((current) =>
-        current.map((turn) =>
-          turn.id === variables.id
-            ? { ...turn, error: error instanceof Error ? error.message : t('copilot.error') }
-            : turn,
-        ),
+    mutationFn: ({ id, question }: { id: string; question: string }) => {
+      abortRef.current = new AbortController();
+      return api.askStream(
+        meetingId,
+        question,
+        (partial) => patchTurn(id, { partial }),
+        abortRef.current.signal,
+      );
+    },
+    onSuccess: (response, { id }) => patchTurn(id, { response }),
+    onError: (error, { id }) =>
+      patchTurn(
+        id,
+        error instanceof DOMException && error.name === 'AbortError'
+          ? { stopped: true }
+          : { error: error instanceof Error ? error.message : t('copilot.error') },
       ),
   });
 
@@ -135,6 +149,10 @@ export function CopilotPanel({ meetingId }: { meetingId: string }) {
                     </p>
                   ) : turn.response ? (
                     <Answer response={turn.response} />
+                  ) : turn.partial ? (
+                    <Partial text={turn.partial} stopped={turn.stopped} />
+                  ) : turn.stopped ? (
+                    <p className="text-sm text-muted-foreground">{t('copilot.stopped')}</p>
                   ) : (
                     <Thinking />
                   )}
@@ -176,15 +194,27 @@ export function CopilotPanel({ meetingId }: { meetingId: string }) {
             placeholder={t('copilot.placeholder')}
             className="max-h-40 min-h-6 flex-1 resize-none bg-transparent py-1 text-sm outline-none placeholder:text-muted-foreground disabled:opacity-60"
           />
-          <button
-            type="submit"
-            data-testid="copilot-send"
-            disabled={ask.isPending || !draft.trim()}
-            aria-label={t('copilot.send')}
-            className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            <ArrowUp aria-hidden="true" className="size-4" />
-          </button>
+          {ask.isPending ? (
+            <button
+              type="button"
+              data-testid="copilot-stop"
+              onClick={() => abortRef.current?.abort()}
+              aria-label={t('copilot.stop')}
+              className={SEND_BUTTON}
+            >
+              <Square aria-hidden="true" className="size-3 fill-current" />
+            </button>
+          ) : (
+            <button
+              type="submit"
+              data-testid="copilot-send"
+              disabled={!draft.trim()}
+              aria-label={t('copilot.send')}
+              className={SEND_BUTTON}
+            >
+              <ArrowUp aria-hidden="true" className="size-4" />
+            </button>
+          )}
         </div>
         <p className="mt-1.5 px-1 text-[11px] text-muted-foreground">{t('copilot.hint')}</p>
       </form>
@@ -224,7 +254,7 @@ function EmptyState({ onPick }: { onPick: (question: string) => void }) {
   );
 }
 
-function AssistantRow({ children }: { children: ReactNode }) {
+export function AssistantRow({ children }: { children: ReactNode }) {
   return (
     <div className="flex gap-2.5">
       <span className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-primary/15">
@@ -235,7 +265,7 @@ function AssistantRow({ children }: { children: ReactNode }) {
   );
 }
 
-function Thinking() {
+export function Thinking() {
   const { t } = useTranslation();
   return (
     <div className="flex items-center gap-2 py-1 text-sm text-muted-foreground">
@@ -249,6 +279,25 @@ function Thinking() {
         ))}
       </span>
       {t('copilot.thinking')}
+    </div>
+  );
+}
+
+/** The answer while it streams: plain text, no sources yet, so it never passes for a grounded answer. */
+function Partial({ text, stopped }: { text: string; stopped?: boolean }) {
+  const { t } = useTranslation();
+  return (
+    <div data-role="assistant" data-state={stopped ? 'stopped' : 'streaming'} className="space-y-2">
+      <div className="space-y-2 text-sm leading-relaxed" data-testid="copilot-partial">
+        <RichText text={text} />
+        {!stopped && (
+          <span
+            aria-hidden="true"
+            className="inline-block h-4 w-1.5 animate-pulse rounded-sm bg-primary align-middle"
+          />
+        )}
+      </div>
+      {stopped && <p className="text-xs text-muted-foreground">{t('copilot.stopped')}</p>}
     </div>
   );
 }

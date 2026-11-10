@@ -20,7 +20,7 @@ Meeting notes fail in two ways: nobody writes them, or they say things nobody sa
 |---|---|
 | **Evidence-first extraction** | Decisions, actions, risks and commitments each carry a quote, a timestamp and a verification score. Click the timestamp and the player jumps there. |
 | **Commitments tracker** | "I'll send it by Friday" becomes an owner, a due date and an overdue flag, collected across every meeting. |
-| **Org copilot** | Ask "what did we decide about the venue?" and get an answer built only from retrieved excerpts, with citations. When the meetings never covered it, the copilot says so. In a meeting it works like a modern AI chat: numbered sources first (click one to hear it), then the answer. |
+| **Org copilot** | Ask "what did we decide about the venue?" and get an answer built only from retrieved excerpts, with citations. When the meetings never covered it, the copilot says so. In a meeting it works like a modern AI chat: the answer streams in (with a Stop button), then numbered sources you can click to hear. Upload agendas, decks and contracts in the Library to search them too. |
 | **Decision timeline** | Follows one decision across meetings and flags when two meetings contradict each other. |
 | **Prep briefs** | Before a meeting: the attendees' open items, unresolved decisions and what changed since the last related meeting. |
 | **Board mode** | Resolutions with mover and seconder, dissents, financial implications, and generated minutes. |
@@ -135,7 +135,7 @@ API reference: `http://127.0.0.1:8470/docs` while the server runs.
 
 - **v0.2 Foundation** (done): auth, consent, MCP tools, Docker, browser tests in CI
 - **v0.3 Measured quality** (current): first real-recording run done (EN/RU/KK); next, hand-annotated meetings as eval cases with precision and recall per item type
-- **Future additions** from the customer and design audits: speaker diarization by default, a stronger default model, local embeddings, streaming copilot answers with follow-ups, a richer meetings list, pages for the dead nav icons
+- **Future additions** from the customer and design audits: speaker diarization by default, a stronger default model, local embeddings, copilot follow-ups and persistence, a richer meetings list
 - **v0.4 Teams**: user accounts, per-organization scoping, per-user agent tokens, audit log, fully local mode
 - **v1.0 Ship**: hosted demo, backup and restore, docs site
 

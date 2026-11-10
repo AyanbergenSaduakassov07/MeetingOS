@@ -53,17 +53,17 @@ Ranked by how much a customer would notice. None of these are scheduled yet.
 
 ### Copilot, next steps toward a modern AI chat
 
-- [ ] Stream the answer token by token (today: 20–60 s of dots on the free model, then the whole answer at once); add a Stop button
+- [x] Stream the answer token by token, with a Stop button (`POST /api/meetings/{id}/ask/stream`, NDJSON). The free model still thinks silently first, so the dots stay until it starts writing
 - [ ] Inline citation markers `[1]` in the answer text, linked to the source cards
 - [ ] Follow-up questions keep context (today every question is answered alone)
 - [ ] Keep the conversation per meeting across reloads; copy the whole thread as Markdown
 - [ ] Copilot on small screens: hidden below 1024 px today; open it as a bottom sheet or full-screen view
-- [ ] Org-wide copilot page: the backend route `POST /api/copilot/ask` exists, but the rail's Copilot icon goes nowhere
+- [x] Org-wide copilot page at `/copilot`; says "nothing is searchable yet" instead of "not discussed" when no records are indexed. Not streamed yet
 - [ ] Suggested follow-ups generated from the answer, not only the three fixed starters
 
 ### Design audit (2026-11-10)
 
-- [ ] Dead navigation: the rail's Copilot and Library icons link to `/copilot` and `/library`, which have no page, so they silently bounce to the dashboard. Build the pages or hide the icons
+- [x] Dead navigation: `/copilot` (org-wide copilot) and `/library` (document upload and list) now exist
 - [ ] Top bar holds only the language toggle: add global search, an upload shortcut and a session/sign-out menu
 - [ ] Meetings list is a bare column on a wide screen: add language badge, duration, item counts, a one-line gist, search and sort
 - [ ] Summary tab: the four count cards should open their tabs; the area below the summary is empty on a wide screen

@@ -56,10 +56,12 @@ instructions, and so is the user's question.
 
 from __future__ import annotations
 
+import contextlib
 import json
 import logging
 import re
 import struct
+from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
 
 from sqlalchemy.orm import Session
@@ -352,6 +354,147 @@ def _parse_reply(raw: str) -> tuple[str, list[str]]:
     return text, []
 
 
+_ANSWER_START = re.compile(r'"answer"\s*:\s*"')
+_JSON_ESCAPES = {"n": "\n", "t": "\t", "r": "", '"': '"', "\\": "\\", "/": "/", "b": "", "f": ""}
+
+
+def partial_answer(raw: str) -> str:
+    """The readable answer inside a reply that is still arriving.
+
+    The model writes ``{"answer": "...", "segment_ids": [...]}``; a reader must
+    see the answer string growing, not JSON. Prose replies pass through minus ids.
+    """
+    match = _ANSWER_START.search(raw)
+    if match is None:
+        # Still inside the opening `{` / code fence, or a model that ignored the format.
+        return "" if raw.lstrip().startswith(("{", "`")) else _BARE_ID.sub("", raw).strip()
+    out: list[str] = []
+    i = match.end()
+    while i < len(raw):
+        char = raw[i]
+        if char == '"':
+            break
+        if char != "\\":
+            out.append(char)
+            i += 1
+            continue
+        if i + 1 >= len(raw):
+            break  # escape split across chunks: wait for the rest
+        code = raw[i + 1]
+        if code == "u":
+            if i + 6 > len(raw):
+                break
+            with contextlib.suppress(ValueError):
+                out.append(chr(int(raw[i + 2 : i + 6], 16)))
+            i += 6
+            continue
+        out.append(_JSON_ESCAPES.get(code, code))
+        i += 2
+    return _INLINE_ID.sub("", "".join(out))
+
+
+@dataclass
+class _Prepared:
+    """Everything a generate call needs, retrieved before any model call."""
+
+    segments: list[TranscriptSegment]
+    labels: dict[str, str]
+    considered: int
+    prompt: str
+
+
+def _validate_question(question: str) -> str:
+    question = (question or "").strip()
+    if not question:
+        raise CopilotError("Question is empty.")
+    if len(question) > MAX_QUESTION_CHARS:
+        raise CopilotError(f"Question is {len(question)} characters; the limit is {MAX_QUESTION_CHARS}.")
+    return question
+
+
+async def _prepare(
+    db: Session, meeting_id: str, question: str, embedder: LLMProvider | None
+) -> CopilotAnswer | _Prepared:
+    """Retrieve the excerpt and build the prompt, or answer NOT_DISCUSSED without a model call."""
+    meeting = db.query(Meeting).filter(Meeting.id == meeting_id).first()
+    if meeting is None:
+        raise CopilotError(f"Meeting {meeting_id} not found.")
+
+    embedder = embedder or get_embedding_provider()
+    # Embedding failures are operational, not programming errors. They must
+    # surface as CopilotError so the route can answer 503 rather than
+    # letting a ProviderError escape as an unhandled 500.
+    try:
+        await ensure_segment_embeddings(db, meeting_id, embedder=embedder)
+        question_vectors = await embedder.embed(redact_many_for_egress([question]))
+    except ProviderError as exc:
+        segments = _whole_transcript_if_short(db, meeting_id)
+        if segments is None:
+            raise CopilotError(f"The embedding model could not be reached: {exc}") from exc
+        logger.warning("Embeddings unavailable (%s); answering over the whole short transcript", exc)
+        considered = len(segments)
+    else:
+        if not question_vectors:
+            raise CopilotError("Embedder returned no vector for the question.")
+        segments, considered = _retrieve(db, meeting_id, question_vectors[0])
+
+    if not segments:
+        # Nothing crossed the similarity floor. Answer honestly here rather
+        # than spending a generate call to be told the same thing.
+        return CopilotAnswer(
+            meeting_id=meeting_id,
+            question=question,
+            answer=NOT_DISCUSSED,
+            not_discussed=True,
+            segments_considered=considered,
+        )
+
+    labels = {speaker.id: speaker.display_label for speaker in db.query(Speaker).filter_by(meeting_id=meeting_id).all()}
+    prompt = _build_prompt(question, _render_excerpt(segments, labels))
+    return _Prepared(segments=segments, labels=labels, considered=considered, prompt=prompt)
+
+
+def _finalize(meeting_id: str, question: str, prepared: _Prepared, raw: str) -> CopilotAnswer:
+    """Parse the full reply and keep only citations from this retrieval."""
+    answer_text, cited_ids = _parse_response(raw)
+    if not answer_text:
+        # Shown as "unsupported" this read as a bad answer; it is no answer at all.
+        raise CopilotError("The model returned an empty answer. Please ask again.")
+
+    # Whitelist: only ids from *this* retrieval are honoured. A fabricated
+    # id is dropped before it is used to look anything up.
+    by_id = {segment.id: segment for segment in prepared.segments}
+    citations = [
+        Citation(
+            segment_id=segment.id,
+            start_ms=segment.start_ms,
+            end_ms=segment.end_ms,
+            speaker_label=prepared.labels.get(segment.speaker_id),
+            text=segment.text,
+        )
+        for segment in (by_id.get(cited) for cited in dict.fromkeys(cited_ids))
+        if segment is not None
+    ]
+
+    rejected = len([cited for cited in set(cited_ids) if cited not in by_id])
+    if rejected:
+        logger.warning("Copilot cited %d segment id(s) not in the retrieved set for meeting %s", rejected, meeting_id)
+
+    not_discussed = answer_text.strip().upper().startswith(NOT_DISCUSSED)
+    return CopilotAnswer(
+        meeting_id=meeting_id,
+        question=question,
+        answer=answer_text,
+        citations=citations,
+        not_discussed=not_discussed,
+        # An answer that asserts something but cites nothing valid is not
+        # grounded, and must not be shown as though it were.
+        unsupported=not not_discussed and not citations,
+        segments_considered=prepared.considered,
+        segments_retrieved=len(prepared.segments),
+    )
+
+
 async def answer_question(
     meeting_id: str,
     question: str,
@@ -367,104 +510,58 @@ async def answer_question(
     """
     from ..database import new_session
 
-    question = (question or "").strip()
-    if not question:
-        raise CopilotError("Question is empty.")
-    if len(question) > MAX_QUESTION_CHARS:
-        raise CopilotError(f"Question is {len(question)} characters; the limit is {MAX_QUESTION_CHARS}.")
-
+    question = _validate_question(question)
     owns_session = db is None
     db = db or new_session()
     try:
-        meeting = db.query(Meeting).filter(Meeting.id == meeting_id).first()
-        if meeting is None:
-            raise CopilotError(f"Meeting {meeting_id} not found.")
-
-        embedder = embedder or get_embedding_provider()
-        # Embedding failures are operational, not programming errors. They must
-        # surface as CopilotError so the route can answer 503 rather than
-        # letting a ProviderError escape as an unhandled 500.
-        try:
-            await ensure_segment_embeddings(db, meeting_id, embedder=embedder)
-            question_vectors = await embedder.embed(redact_many_for_egress([question]))
-        except ProviderError as exc:
-            segments = _whole_transcript_if_short(db, meeting_id)
-            if segments is None:
-                raise CopilotError(f"The embedding model could not be reached: {exc}") from exc
-            logger.warning("Embeddings unavailable (%s); answering over the whole short transcript", exc)
-            considered = len(segments)
-        else:
-            if not question_vectors:
-                raise CopilotError("Embedder returned no vector for the question.")
-            segments, considered = _retrieve(db, meeting_id, question_vectors[0])
-
-        if not segments:
-            # Nothing crossed the similarity floor. Answer honestly here rather
-            # than spending a generate call to be told the same thing.
-            return CopilotAnswer(
-                meeting_id=meeting_id,
-                question=question,
-                answer=NOT_DISCUSSED,
-                not_discussed=True,
-                segments_considered=considered,
-            )
-
-        labels = {
-            speaker.id: speaker.display_label for speaker in db.query(Speaker).filter_by(meeting_id=meeting_id).all()
-        }
-        prompt = _build_prompt(question, _render_excerpt(segments, labels))
-
+        prepared = await _prepare(db, meeting_id, question, embedder)
+        if isinstance(prepared, CopilotAnswer):
+            return prepared
         provider = provider or get_llm_provider()
         try:
-            completion = await provider.generate(
-                prompt,
-                system=_SYSTEM_PROMPT,
-                max_tokens=ANSWER_MAX_TOKENS,
-            )
+            completion = await provider.generate(prepared.prompt, system=_SYSTEM_PROMPT, max_tokens=ANSWER_MAX_TOKENS)
         except ProviderError as exc:
             raise CopilotError(f"The model could not be reached: {exc}") from exc
+        return _finalize(meeting_id, question, prepared, completion.text)
+    finally:
+        if owns_session:
+            db.close()
 
-        answer_text, cited_ids = _parse_response(completion.text)
-        if not answer_text:
-            # Shown as "unsupported" this read as a bad answer; it is no answer at all.
-            raise CopilotError("The model returned an empty answer. Please ask again.")
 
-        # Whitelist: only ids from *this* retrieval are honoured. A fabricated
-        # id is dropped before it is used to look anything up.
-        by_id = {segment.id: segment for segment in segments}
-        citations = [
-            Citation(
-                segment_id=segment.id,
-                start_ms=segment.start_ms,
-                end_ms=segment.end_ms,
-                speaker_label=labels.get(segment.speaker_id),
-                text=segment.text,
-            )
-            for segment in (by_id.get(cited) for cited in dict.fromkeys(cited_ids))
-            if segment is not None
-        ]
+async def stream_answer(
+    meeting_id: str,
+    question: str,
+    *,
+    db: Session | None = None,
+    provider: LLMProvider | None = None,
+    embedder: LLMProvider | None = None,
+) -> AsyncIterator[str | CopilotAnswer]:
+    """Like ``answer_question``, but yields the readable answer so far as it grows,
+    then the validated ``CopilotAnswer`` last. Raises ``CopilotError`` like it."""
+    from ..database import new_session
 
-        rejected = len([cited for cited in set(cited_ids) if cited not in by_id])
-        if rejected:
-            logger.warning(
-                "Copilot cited %d segment id(s) not in the retrieved set for meeting %s",
-                rejected,
-                meeting_id,
-            )
-
-        not_discussed = answer_text.strip().upper().startswith(NOT_DISCUSSED)
-        return CopilotAnswer(
-            meeting_id=meeting_id,
-            question=question,
-            answer=answer_text,
-            citations=citations,
-            not_discussed=not_discussed,
-            # An answer that asserts something but cites nothing valid is not
-            # grounded, and must not be shown as though it were.
-            unsupported=not not_discussed and not citations,
-            segments_considered=considered,
-            segments_retrieved=len(segments),
-        )
+    question = _validate_question(question)
+    owns_session = db is None
+    db = db or new_session()
+    try:
+        prepared = await _prepare(db, meeting_id, question, embedder)
+        if isinstance(prepared, CopilotAnswer):
+            yield prepared
+            return
+        provider = provider or get_llm_provider()
+        raw, shown = "", ""
+        try:
+            async for chunk in provider.generate_stream(
+                prepared.prompt, system=_SYSTEM_PROMPT, max_tokens=ANSWER_MAX_TOKENS
+            ):
+                raw += chunk
+                text = partial_answer(raw)
+                if text != shown:
+                    shown = text
+                    yield text
+        except ProviderError as exc:
+            raise CopilotError(f"The model could not be reached: {exc}") from exc
+        yield _finalize(meeting_id, question, prepared, raw)
     finally:
         if owns_session:
             db.close()

@@ -86,7 +86,9 @@
     "emptyTitle": "Ask about this meeting",
     "copy": "Copy",
     "copied": "Copied",
-    "hint": "Enter to send · Shift+Enter for a new line"
+    "hint": "Enter to send · Shift+Enter for a new line",
+    "stop": "Stop",
+    "stopped": "Stopped."
   },
   "meetings": {
     "title": "Meetings",
@@ -245,5 +247,24 @@
     "copy": "Copy minutes",
     "copied": "Copied",
     "download": "Download .md"
+  },
+  "library": {
+    "title": "Library",
+    "subtitle": "Documents the org copilot searches beside your meetings: agendas, decks, contracts.",
+    "file": "File",
+    "docTitle": "Title",
+    "sensitive": "Sensitive",
+    "upload": "Upload",
+    "allowed": "PDF, DOCX, PPTX, TXT or Markdown.",
+    "notIndexed": "Saved, but not searchable yet: the embedding model is unavailable.",
+    "empty": "No documents yet. Upload one to make it searchable by the copilot."
+  },
+  "orgCopilot": {
+    "title": "Ask across all meetings",
+    "subtitle": "Answers come from every meeting and document in the library, each with its source.",
+    "placeholder": "Ask about any meeting or document…",
+    "nothingIndexed": "Nothing is searchable yet. Meetings and documents become searchable once the embedding model has indexed them; ask about one meeting from its page in the meantime.",
+    "notFound": "None of your meetings or documents cover this.",
+    "untitled": "Untitled"
   }
 }

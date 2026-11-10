@@ -15,6 +15,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+from collections.abc import AsyncIterator
 from typing import Any, TypeVar
 
 from pydantic import BaseModel, ValidationError
@@ -165,6 +166,38 @@ class OpenAIProvider(LLMProvider):
         response = await retry_with_backoff(_call, description="openai.generate")
         text = self._first_choice(response, "generate").message.content or ""
         return Completion(text=text, model=response.model, usage=self._usage(response))
+
+    async def generate_stream(
+        self,
+        prompt: str,
+        *,
+        system: str | None = None,
+        max_tokens: int | None = None,
+        temperature: float | None = None,
+    ) -> AsyncIterator[str]:
+        client = self._get_client()
+
+        async def _open():
+            try:
+                return await client.chat.completions.create(
+                    model=self.config.model,
+                    messages=self._messages(prompt, system),
+                    max_tokens=self.resolved_max_tokens(max_tokens),
+                    temperature=self.resolved_temperature(temperature),
+                    stream=True,
+                )
+            except Exception as exc:
+                raise self._wrap_error(exc) from exc
+
+        # Only opening the stream is retried; a stream that breaks midway cannot be replayed.
+        stream = await retry_with_backoff(_open, description="openai.generate_stream")
+        try:
+            async for chunk in stream:
+                delta = chunk.choices[0].delta.content if chunk.choices else None
+                if delta:
+                    yield delta
+        except Exception as exc:
+            raise self._wrap_error(exc) from exc
 
     @staticmethod
     def _first_choice(response, operation: str):

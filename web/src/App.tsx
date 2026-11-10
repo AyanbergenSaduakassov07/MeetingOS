@@ -9,8 +9,10 @@ import { Toaster } from './components/ui/toaster';
 import { api } from './lib/api';
 import { Commitments } from './routes/Commitments';
 import { Dashboard } from './routes/Dashboard';
+import { Library } from './routes/Library';
 import { MeetingDetail } from './routes/MeetingDetail';
 import { MeetingsList } from './routes/MeetingsList';
+import { OrgCopilot } from './routes/OrgCopilot';
 import { PrivacySettings } from './routes/PrivacySettings';
 
 export default function App() {
@@ -42,6 +44,8 @@ export default function App() {
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/commitments" element={<Commitments />} />
               <Route path="/settings/privacy" element={<PrivacySettings />} />
+              <Route path="/copilot" element={<OrgCopilot />} />
+              <Route path="/library" element={<Library />} />
               <Route path="/meetings" element={<MeetingsList />} />
               <Route path="/meetings/:meetingId" element={<MeetingDetail />} />
               <Route path="*" element={<Navigate to="/dashboard" replace />} />
