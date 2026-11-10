@@ -306,6 +306,14 @@ export interface Session {
   authenticated: boolean;
 }
 
+export interface Minutes {
+  meeting_id: string;
+  line_count: number;
+  cited_line_count: number;
+  markdown: string;
+  summary: string | null;
+}
+
 export const api = {
   getSession: () => get<Session>('/api/session'),
   login: (apiKey: string) => sendJson<void>('POST', '/api/session', { api_key: apiKey }),
@@ -322,6 +330,12 @@ export const api = {
     sendJson<RedactionInfo>('PUT', '/api/privacy/redaction', { enabled, rules }),
   listCommitments: (params: Record<string, string> = {}) =>
     get<CommitmentList>(`/api/commitments?${new URLSearchParams(params)}`),
+  // Deterministic minutes; `summarise` adds an LLM paragraph written only from them.
+  getMinutes: (id: string, summarise: boolean, language: string) =>
+    request<Minutes>(
+      `/api/meetings/${id}/minutes?${new URLSearchParams({ summarise: String(summarise), language })}`,
+      { method: 'POST' },
+    ),
   ask: (id: string, question: string) =>
     sendJson<AskResponse>('POST', `/api/meetings/${id}/ask`, { question }),
 

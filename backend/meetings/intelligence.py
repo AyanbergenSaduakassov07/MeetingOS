@@ -183,6 +183,9 @@ Rules:
   the excerpt.
 - Do not merge several statements into one item, and do not split one
   statement into several. Never repeat an item; stop when nothing new remains.
+- Skip meeting logistics and small talk: setting up equipment, introductions,
+  icebreakers, announcing the next agenda point. Record only what matters to
+  the work after the meeting ends.
 - Set confidence honestly. Use a low value when the wording is ambiguous.
 - Meetings may be in any language, or mix several (English, Russian, Kazakh
   and others). Write each item in the language of the segment it cites, and

@@ -53,7 +53,9 @@ export function QualityIndicator({ quality }: { quality: ExtractionQuality }) {
       ) : (
         <>
           <p className="mt-2 font-mono text-3xl font-bold tabular-nums">
-            {quality.verified_rate === null ? '—' : `${Math.round(quality.verified_rate * 100)}%`}
+            {quality.verified_rate === null || quality.unverified === quality.total_items
+              ? '—'
+              : `${Math.round(quality.verified_rate * 100)}%`}
             <span className="ml-2 font-sans text-sm font-normal text-muted-foreground">
               {t('quality.verifiedOf', { total: quality.total_items })}
             </span>

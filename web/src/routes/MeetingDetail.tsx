@@ -7,6 +7,7 @@ import { CitationTime } from '@/components/CitationTime';
 import { CopilotPanel } from '@/components/CopilotPanel';
 import { ItemCard, type ItemKind } from '@/components/ItemCard';
 import { PlayerBar } from '@/components/PlayerBar';
+import { SummaryPanel } from '@/components/SummaryPanel';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ApiError, api, type ExtractedItem } from '@/lib/api';
 import { formatTimestamp } from '@/lib/playback';
@@ -219,7 +220,12 @@ export function MeetingDetail() {
                 <AlertTriangle aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-warn" />
                 <div>
                   <p className="font-medium">{t('meetings.extractionIncomplete')}</p>
-                  <p className="text-muted-foreground">{data.processing_error}</p>
+                  <p className="text-muted-foreground">{t('meetings.extractionIncompleteHint')}</p>
+                  {/* Raw provider text is English and may carry URLs: keep it out of the way. */}
+                  <details className="mt-1 text-xs text-muted-foreground">
+                    <summary className="cursor-pointer">{t('common.details')}</summary>
+                    <p className="mt-1 break-words">{data.processing_error}</p>
+                  </details>
                 </div>
               </div>
             )}
@@ -270,6 +276,9 @@ export function MeetingDetail() {
                       ))}
                     </ul>
                   </section>
+                )}
+                {status === 'completed' && (
+                  <SummaryPanel meetingId={meetingId} title={data.title} />
                 )}
               </TabsContent>
 

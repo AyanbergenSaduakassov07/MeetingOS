@@ -91,7 +91,9 @@ MIN_SIMILARITY = 0.25
 # segments out of the model's attention, and no genuine question needs more.
 MAX_QUESTION_CHARS = 1000
 
-ANSWER_MAX_TOKENS = 700
+# Free models think silently before answering (~650 hidden tokens measured on a
+# 150-character answer); 700 sometimes left nothing and the answer came back empty.
+ANSWER_MAX_TOKENS = 3000
 
 # The model returns this exact token when the excerpt does not answer the
 # question. Matched as a literal, not parsed out of prose.
@@ -123,6 +125,8 @@ Rules:
   question that was discussed instead. Saying the transcript does not cover it
   is a correct and useful answer.
 - Do not speculate about what someone meant or would have said.
+- Write the answer in the language of the question, even when the transcript
+  is in another language.
 
 Reply with a single JSON object and nothing else:
 {"answer": "<your answer, or NOT_DISCUSSED>", "segment_ids": ["<id>", ...]}"""
@@ -298,6 +302,19 @@ _JSON_OBJECT = re.compile(r"\{.*\}", re.DOTALL)
 
 
 def _parse_response(raw: str) -> tuple[str, list[str]]:
+    """Answer + cited ids; ids the model wrote inline in its prose count too, then leave the text."""
+    answer, ids = _parse_reply(raw)
+    inline = [match.group(1) for match in _INLINE_ID.finditer(answer)]
+    return _INLINE_ID.sub("", answer).strip(), ids or inline
+
+
+# A segment id written into the answer, with the backticks/label a model wraps it in.
+_INLINE_ID = re.compile(
+    r"\s*(?:\(\s*)?(?:\w+:\s*)?`?([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})`?(?:\s*\))?"
+)
+
+
+def _parse_reply(raw: str) -> tuple[str, list[str]]:
     """Pull the answer and cited ids out of the model's reply.
 
     ``generate`` returns free text, so this tolerates a model that wraps its
@@ -396,6 +413,9 @@ async def answer_question(
             raise CopilotError(f"The model could not be reached: {exc}") from exc
 
         answer_text, cited_ids = _parse_response(completion.text)
+        if not answer_text:
+            # Shown as "unsupported" this read as a bad answer; it is no answer at all.
+            raise CopilotError("The model returned an empty answer. Please ask again.")
 
         # Whitelist: only ids from *this* retrieval are honoured. A fabricated
         # id is dropped before it is used to look anything up.

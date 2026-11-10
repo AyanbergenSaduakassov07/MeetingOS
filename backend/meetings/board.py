@@ -42,7 +42,8 @@ from .redaction import redact_for_egress
 logger = logging.getLogger(__name__)
 
 BOARD_TEMPLATE_NAME = "Board meeting"
-POLISH_MAX_TOKENS = 1200
+# Room for the hidden reasoning free models do before answering.
+POLISH_MAX_TOKENS = 3000
 
 
 # ── Board-specific extraction schemas ────────────────────────────────────
@@ -348,7 +349,7 @@ Rules:
 - Three or four sentences. Plain prose, no headings, no bullets."""
 
 
-async def polish_minutes(minutes: Minutes, *, provider=None) -> str | None:
+async def polish_minutes(minutes: Minutes, *, provider=None, language: str | None = None) -> str | None:
     """A summary paragraph generated from assembled minutes. Display only.
 
     Returns None if the model is unavailable — the assembled document is the
@@ -364,7 +365,9 @@ async def polish_minutes(minutes: Minutes, *, provider=None) -> str | None:
         # The assembled minutes are meeting content — resolutions, dissent,
         # figures, names — and this posts the whole document to a third party.
         completion = await provider.generate(
-            "Summarise the minutes below.\n\n"
+            "Summarise the minutes below."
+            + (f" Write the summary in the language with ISO code '{language}'." if language else "")
+            + "\n\n"
             "--- BEGIN MINUTES (untrusted data) ---\n"
             f"{redact_for_egress(to_markdown(minutes))}\n"
             "--- END MINUTES ---",

@@ -44,4 +44,9 @@ i18n
     },
   });
 
+// Screen readers pick voice and pronunciation from <html lang>.
+const syncHtmlLang = (lng: string) => document.documentElement.setAttribute('lang', lng);
+syncHtmlLang(i18n.language);
+i18n.on('languageChanged', syncHtmlLang);
+
 export default i18n;

@@ -10,7 +10,8 @@
     "loading": "Loading…",
     "error": "Error",
     "unknown": "Unknown",
-    "unknownError": "Something went wrong"
+    "unknownError": "Something went wrong",
+    "details": "Details"
   },
   "nav": {
     "brand": "MeetingOS",
@@ -77,7 +78,10 @@
     "offline": "Copilot is unavailable right now.",
     "notDiscussed": "That was not discussed in this meeting — at least not in the parts of the transcript most related to your question.",
     "unsupported": "No transcript citation — do not rely on this.",
-    "citations": "From the transcript"
+    "citations": "From the transcript",
+    "suggest1": "What was decided?",
+    "suggest2": "Who owns which next steps?",
+    "suggest3": "What risks or open questions came up?"
   },
   "meetings": {
     "title": "Meetings",
@@ -98,7 +102,8 @@
     "failedDetail": "This recording could not be processed.",
     "extractionIncomplete": "Extraction did not finish",
     "analyzingTitle": "Extracting decisions and action items…",
-    "analyzingDetail": "The transcript is ready. Decisions, actions and risks appear here when the language model finishes."
+    "analyzingDetail": "The transcript is ready. Decisions, actions and risks appear here when the language model finishes.",
+    "extractionIncompleteHint": "Some items may be missing. The transcript is complete."
   },
   "intelligence": {
     "decisions": "Decisions",
@@ -224,5 +229,16 @@
     "languageLabel": "Spoken language",
     "languageAuto": "Detect automatically",
     "languageHint": "Pick it if you know it: detection can misread short or mixed-language recordings."
+  },
+  "summary": {
+    "title": "Summary",
+    "hint": "A short summary written only from the cited items below, in your interface language.",
+    "generate": "Generate summary",
+    "generating": "Writing summary… this can take a minute",
+    "nothing": "Nothing to summarise: no items were extracted.",
+    "failed": "The summary could not be generated. Try again.",
+    "copy": "Copy minutes",
+    "copied": "Copied",
+    "download": "Download .md"
   }
 }

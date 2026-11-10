@@ -343,3 +343,11 @@ def test_board_template_endpoint_is_idempotent(data_dir, db, org):
         second = client.post("/api/meetings/templates/board").json()
     assert first["id"] == second["id"]
     assert db.query(MeetingTemplate).count() == 1
+
+
+def test_summary_can_be_asked_for_in_another_language(db, org, minuted_board):
+    """A Kazakh reader of a Russian meeting asks for the summary in Kazakh."""
+    llm = FakeLLM()
+    asyncio.run(polish_minutes(render_minutes(db, minuted_board.id), provider=llm, language="kk"))
+
+    assert "ISO code 'kk'" in llm.prompts[0][1]

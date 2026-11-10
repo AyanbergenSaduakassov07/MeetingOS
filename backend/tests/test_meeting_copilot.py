@@ -449,3 +449,27 @@ async def test_long_meeting_still_errors_when_embeddings_are_down(db, meeting, m
         await copilot.answer_question(
             meeting.id, "Anything?", db=db, provider=FakeLLM(reply("x", [])), embedder=NoCreditsEmbedder()
         )
+
+
+@pytest.mark.asyncio
+async def test_empty_model_reply_is_an_error_not_an_unsupported_answer(db, meeting):
+    """A model that spends its budget thinking returns ""; that must not display as an answer."""
+    with pytest.raises(copilot.CopilotError, match="empty answer"):
+        await copilot.answer_question(
+            meeting.id, "Anything?", db=db, provider=FakeLLM(""), embedder=NoCreditsEmbedder()
+        )
+
+
+@pytest.mark.asyncio
+async def test_ids_written_inline_in_prose_still_count_as_citations(db, meeting):
+    """Seen live: on a Kazakh question about a Russian meeting the model wrote prose with ids inline."""
+    cited = segment_id(db, meeting, 3)
+    prose = f"Priya said the sponsor money has not cleared (segment: `{cited}`)."
+
+    result = await copilot.answer_question(
+        meeting.id, "Sponsor?", db=db, provider=FakeLLM(prose), embedder=NoCreditsEmbedder()
+    )
+
+    assert not result.unsupported
+    assert [citation.segment_id for citation in result.citations] == [cited]
+    assert cited not in result.answer

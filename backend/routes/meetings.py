@@ -606,6 +606,7 @@ class MinutesOut(BaseModel):
 async def generate_minutes(
     meeting_id: str,
     summarise: bool = Query(False, description="Also generate a prose summary."),
+    language: str | None = Query(None, description="Language code for the summary; default follows the minutes."),
     db: Session = Depends(get_db),
 ) -> MinutesOut:
     """Assemble board minutes from this meeting's extracted items.
@@ -618,9 +619,14 @@ async def generate_minutes(
     if meeting is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Meeting {meeting_id} not found")
 
+    if language and language not in SPOKEN_LANGUAGES:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=f"Unsupported language: {language}"
+        )
+
     minutes = render_minutes(db, meeting_id)
     if summarise:
-        minutes.polished = await polish_minutes(minutes)
+        minutes.polished = await polish_minutes(minutes, language=language)
 
     def line(entry) -> MinuteLineOut:
         return MinuteLineOut(

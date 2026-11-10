@@ -51,8 +51,8 @@ export function CopilotPanel({ meetingId }: { meetingId: string }) {
       ),
   });
 
-  const submit = () => {
-    const question = draft.trim();
+  const submit = (text = draft) => {
+    const question = text.trim();
     if (!question || ask.isPending) return;
     const id = `turn-${Date.now()}`;
     setTurns((current) => [...current, { id, question }]);
@@ -78,7 +78,24 @@ export function CopilotPanel({ meetingId }: { meetingId: string }) {
         aria-busy={ask.isPending}
       >
         {turns.length === 0 ? (
-          <p className="text-sm text-muted-foreground">{t('copilot.empty')}</p>
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">{t('copilot.empty')}</p>
+            <ul className="flex flex-col gap-2" data-testid="copilot-suggestions">
+              {(['copilot.suggest1', 'copilot.suggest2', 'copilot.suggest3'] as const).map(
+                (key) => (
+                  <li key={key}>
+                    <button
+                      type="button"
+                      className="w-full rounded-md border border-border px-3 py-2 text-left text-sm hover:bg-secondary"
+                      onClick={() => submit(t(key))}
+                    >
+                      {t(key)}
+                    </button>
+                  </li>
+                ),
+              )}
+            </ul>
+          </div>
         ) : (
           turns.map((turn) => (
             <div key={turn.id} className="space-y-2">
