@@ -1,13 +1,17 @@
 import { loadFont as loadGolos } from '@remotion/google-fonts/GolosText';
 import { loadFont as loadPlexMono } from '@remotion/google-fonts/IBMPlexMono';
 import { loadFont as loadManrope } from '@remotion/google-fonts/Manrope';
+import { createContext, useContext } from 'react';
 import { Easing, interpolate, spring } from 'remotion';
 
 // The app's own type and palette (web/src/index.css), on a dark stage.
 const subsets: ('latin' | 'cyrillic' | 'cyrillic-ext')[] = ['latin', 'cyrillic', 'cyrillic-ext'];
 export const DISPLAY = loadGolos('normal', { weights: ['700', '900'], subsets }).fontFamily;
 export const SANS = loadManrope('normal', { weights: ['400', '500', '600'], subsets }).fontFamily;
-export const MONO = loadPlexMono('normal', { weights: ['400', '500'], subsets: ['latin'] }).fontFamily;
+export const MONO = loadPlexMono('normal', {
+  weights: ['400', '500'],
+  subsets: ['latin'],
+}).fontFamily;
 
 export const C = {
   stage: '#0A0C0B',
@@ -33,6 +37,19 @@ export const T = {
 
 // The app window every product shot sits in: 16:10 like the captures.
 export const WINDOW = { left: 224, top: 128, width: 1472, height: 920 };
+
+export type Box = typeof WINDOW;
+export type Layout = { vertical: boolean; width: number; height: number; window: Box };
+export const LANDSCAPE: Layout = { vertical: false, width: 1920, height: 1080, window: WINDOW };
+// 9:16 reel. Instagram's UI covers roughly the top 220 px and the bottom 420 px.
+export const VERTICAL: Layout = {
+  vertical: true,
+  width: 1080,
+  height: 1920,
+  window: { left: 60, top: 430, width: 960, height: 1060 },
+};
+export const LayoutContext = createContext<Layout>(LANDSCAPE);
+export const useLayout = () => useContext(LayoutContext);
 
 export const glide = Easing.bezier(0.65, 0, 0.35, 1);
 

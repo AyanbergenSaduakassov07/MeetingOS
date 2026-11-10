@@ -1,7 +1,7 @@
 import { AbsoluteFill, interpolate } from 'remotion';
 import { Caption } from '../components/Brand';
-import { type Rect, Shot } from '../components/Shot';
-import { C, clamp } from '../theme';
+import { type CameraKey, type Rect, Shot } from '../components/Shot';
+import { C, clamp, useLayout } from '../theme';
 
 // Frames of the real copilot UI streaming a recorded answer (see scripts/capture.py).
 const TYPE_FROM = 18;
@@ -30,19 +30,27 @@ const frameFor = (frame: number) => {
   return 'copilot-99-answer';
 };
 
+const LANDSCAPE_KEYS: CameraKey[] = [
+  { at: 0, rect: [0, 0, 3200, 2000] },
+  { at: TYPE_FROM, rect: [1880, 1080, 1320, 825] },
+  { at: SEND_AT, rect: [1880, 1080, 1320, 825] },
+  { at: SEND_AT + 30, rect: [2400, 140, 800, 500] },
+  { at: ANSWER_AT + 10, rect: [2400, 140, 800, 500] },
+  { at: ANSWER_AT + 70, rect: [2420, 390, 800, 500] },
+];
+// The per-meeting copilot only exists at desktop width (hidden below lg), so the
+// vertical cut frames the desktop capture's copilot panel (x 2432-3200) instead.
+const VERTICAL_KEYS: CameraKey[] = [
+  { at: 0, rect: [2432, 980, 768, 848] },
+  { at: SEND_AT, rect: [2432, 980, 768, 848] },
+  { at: SEND_AT + 30, rect: [2432, 160, 768, 848] },
+  { at: ANSWER_AT + 10, rect: [2432, 160, 768, 848] },
+  { at: ANSWER_AT + 70, rect: [2480, 250, 720, 795] },
+];
+
 export const Copilot: React.FC = () => (
   <AbsoluteFill style={{ background: C.stage }}>
-    <Shot
-      src={frameFor}
-      keys={[
-        { at: 0, rect: [0, 0, 3200, 2000] },
-        { at: TYPE_FROM, rect: [1880, 1080, 1320, 825] },
-        { at: SEND_AT, rect: [1880, 1080, 1320, 825] },
-        { at: SEND_AT + 30, rect: [2400, 140, 800, 500] },
-        { at: ANSWER_AT + 10, rect: [2400, 140, 800, 500] },
-        { at: ANSWER_AT + 70, rect: [2420, 390, 800, 500] },
-      ]}
-    >
+    <Shot src={frameFor} keys={useLayout().vertical ? VERTICAL_KEYS : LANDSCAPE_KEYS}>
       {(place, frame) => {
         if (frame < TYPE_FROM || frame >= SEND_AT) return null;
         // Typing: uncover the captured question character by character.

@@ -1,6 +1,6 @@
 import { AbsoluteFill, interpolate, useCurrentFrame } from 'remotion';
 import { Logo } from '../components/Brand';
-import { C, clamp, DISPLAY, MONO, SANS, settle } from '../theme';
+import { C, clamp, DISPLAY, MONO, SANS, settle, useLayout } from '../theme';
 
 export const CREDITS =
   'Real product footage · Demo meetings: AMI Meeting Corpus (CC BY 4.0), FLEURS (CC BY 4.0) · Copilot answer replayed from a recorded run';
@@ -41,6 +41,7 @@ export const Lockup: React.FC<{ frame: number; scale?: number }> = ({ frame, sca
 
 export const Closing: React.FC = () => {
   const frame = useCurrentFrame();
+  const { vertical } = useLayout();
   return (
     <AbsoluteFill
       style={{
@@ -50,13 +51,15 @@ export const Closing: React.FC = () => {
         opacity: interpolate(frame, [192, 210], [1, 0], clamp),
       }}
     >
-      <Lockup frame={frame} />
+      <Lockup frame={frame} scale={vertical ? 0.92 : 1} />
       <div
         style={{
           position: 'absolute',
-          bottom: 48,
+          // Vertical: under the lockup, clear of Instagram's caption area.
+          ...(vertical ? { top: 1200, width: 860, lineHeight: 1.6 } : { bottom: 48 }),
+          textAlign: 'center',
           fontFamily: MONO,
-          fontSize: 17,
+          fontSize: vertical ? 22 : 17,
           color: C.dim,
           opacity: interpolate(frame, [70, 90], [0, 0.8], clamp),
         }}

@@ -1,6 +1,6 @@
 import type React from 'react';
 import { Img, interpolate, staticFile, useCurrentFrame } from 'remotion';
-import { clamp, glide, WINDOW } from '../theme';
+import { type Box, clamp, glide, useLayout } from '../theme';
 
 /** A region of a screenshot, in screenshot pixels: [x, y, width, height]. */
 export type Rect = [number, number, number, number];
@@ -10,7 +10,7 @@ export type Place = (rect: Rect) => React.CSSProperties;
 type Props = {
   src: string | ((frame: number) => string);
   keys: CameraKey[];
-  box?: { left: number; top: number; width: number; height: number };
+  box?: Box;
   image?: { width: number; height: number };
   style?: React.CSSProperties;
   /** Overlays drawn in screenshot coordinates, so they track the camera. */
@@ -24,17 +24,29 @@ type Props = {
 export const Shot: React.FC<Props> = ({
   src,
   keys,
-  box = WINDOW,
-  image = { width: 3200, height: 2000 },
+  box: given,
+  image: givenImage,
   style,
   children,
 }) => {
   const frame = useCurrentFrame();
+  const layout = useLayout();
+  const box = given ?? layout.window;
+  const file = typeof src === 'function' ? src(frame) : src;
+  // phone/ captures are 480x1000 CSS at 2x; the rest are 1600x1000 at 2x.
+  const image =
+    givenImage ??
+    (file.startsWith('phone/') ? { width: 960, height: 2000 } : { width: 3200, height: 2000 });
   const at = keys.map((key) => key.at);
   const [x, y, w, h] = [0, 1, 2, 3].map((i) =>
     keys.length === 1
       ? keys[0].rect[i]
-      : interpolate(frame, at, keys.map((key) => key.rect[i]), { ...clamp, easing: glide }),
+      : interpolate(
+          frame,
+          at,
+          keys.map((key) => key.rect[i]),
+          { ...clamp, easing: glide },
+        ),
   );
   const scale = Math.min(box.width / w, box.height / h);
   const offsetX = box.width / 2 - (x + w / 2) * scale;
@@ -46,7 +58,6 @@ export const Shot: React.FC<Props> = ({
     width: rw * scale,
     height: rh * scale,
   });
-  const file = typeof src === 'function' ? src(frame) : src;
 
   return (
     <div

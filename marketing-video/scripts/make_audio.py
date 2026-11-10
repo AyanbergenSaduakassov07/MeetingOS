@@ -91,7 +91,38 @@ def riser(t: np.ndarray, start: float, end: float) -> np.ndarray:
     return (t < end) * noise * span**3 * 0.22
 
 
-def build_score() -> np.ndarray:
+STEP_S = 60 / 96 / 2  # eighth notes at 96 BPM
+
+
+def pluck(t: np.ndarray, chords: list[tuple[float, float, list[int]]]) -> np.ndarray:
+    """Arpeggio an octave over each chord's top notes: 0.6-4 kHz that phone speakers play."""
+    out = np.zeros((2, t.size))
+    for start, end, notes in chords:
+        top = [n + 12 for n in notes[-4:]]
+        for step, at in enumerate(np.arange(max(start, 7.0), min(end, 57.0), STEP_S)):
+            a, b = int(at * RATE), min(t.size, int((at + 0.6) * RATE))
+            local = t[a:b] - at
+            f = hz(top[step % len(top)])
+            note = sum(
+                g * np.sin(2 * np.pi * k * f * local)
+                for k, g in ((1, 1), (2, 0.4), (3, 0.15))
+            )
+            note = note * np.exp(-local * 9) * np.clip(local / 0.004, 0, 1)
+            pan = 0.35 if step % 2 else -0.35
+            out[0, a:b] += note * (1 - pan)
+            out[1, a:b] += note * (1 + pan)
+    return out
+
+
+def high_pass(x: np.ndarray, cutoff: float) -> np.ndarray:
+    """First-order, zero-phase high-pass: trims sub that phone speakers can't play anyway."""
+    f = np.fft.rfftfreq(x.shape[1], 1 / RATE)
+    gain = f / np.sqrt(f**2 + cutoff**2)
+    return np.fft.irfft(np.fft.rfft(x, axis=1) * gain, n=x.shape[1], axis=1)
+
+
+def build_score(reel: bool = False) -> np.ndarray:
+    """reel=True: the phone mix for the 9:16 cut (brighter, saturated low end, no sub)."""
     t = np.arange(int(RATE * LENGTH_S)) / RATE
     # D minor colour that opens up, then resolves to D major on the logo.
     chords = [
@@ -102,11 +133,17 @@ def build_score() -> np.ndarray:
         (53.0, 62.0, [38, 50, 57, 62, 66, 69, 74]),  # D major: resolve
     ]
     music = pad(t, chords)
+    if reel:
+        # Gentle saturation gives the low pad notes harmonics a phone can reproduce.
+        music = np.tanh(1.5 * music / np.max(np.abs(music))) * np.max(np.abs(music))
+        music = music + 0.22 * np.max(np.abs(music)) * pluck(t, chords) / 1.55
     mono = sum(hit(t, cut, 0.55 if cut != 53.0 else 0.8) for cut in CUTS_S)
     mono = mono + sum(tick(t, at) for at in TICKS_S) + riser(t, 49.5, 53.0)
     music = music + np.stack([mono, mono])
     master = envelope(t, 0.0, LENGTH_S, 1.2) * np.clip(1 - (t - 57.5) / 2.5, 0, 1)
     music *= master
+    if reel:
+        music = high_pass(music, 70.0)
     return music / np.max(np.abs(music)) * 0.84
 
 
@@ -159,6 +196,9 @@ def main() -> None:
     score = build_score()
     assert score.shape == (2, int(RATE * LENGTH_S)) and np.max(np.abs(score)) <= 0.85
     write_wav(AUDIO / "score.wav", score)
+    reel = build_score(reel=True)
+    assert reel.shape == score.shape and np.max(np.abs(reel)) <= 0.85
+    write_wav(AUDIO / "score-reel.wav", reel)
     ami = Path(os.environ.get("FILM_AMI_WAV", ""))
     if ami.is_file():
         voice_and_peaks(ami)

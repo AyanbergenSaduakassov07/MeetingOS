@@ -6,7 +6,7 @@ import { Intelligence } from '../scenes/Intelligence';
 import { LiveMeeting } from '../scenes/LiveMeeting';
 import { Opening } from '../scenes/Opening';
 import { ProductReveal } from '../scenes/ProductReveal';
-import { C, clamp, T } from '../theme';
+import { C, clamp, LayoutContext, T, useLayout, VERTICAL } from '../theme';
 
 // The AMI speaker under the transcript shot (public/audio/voice.wav, 6.5 s).
 const VOICE_AT = T.workflow + 220;
@@ -33,6 +33,8 @@ const SoftIn: React.FC<{ children: React.ReactNode; skip: boolean }> = ({ childr
 
 export const MeetingOSLaunch: React.FC = () => {
   const frame = useCurrentFrame();
+  // The reel gets a phone mix: brighter, with no sub a phone speaker can't play.
+  const score = useLayout().vertical ? 'audio/score-reel.wav' : 'audio/score.wav';
   const duck = interpolate(
     frame,
     [VOICE_AT - 10, VOICE_AT, VOICE_AT + VOICE_FRAMES - 10, VOICE_AT + VOICE_FRAMES + 10],
@@ -48,10 +50,17 @@ export const MeetingOSLaunch: React.FC = () => {
           </SoftIn>
         </Sequence>
       ))}
-      <Audio src={staticFile('audio/score.wav')} volume={0.9 * duck} />
+      <Audio src={staticFile(score)} volume={0.9 * duck} />
       <Sequence from={VOICE_AT} durationInFrames={VOICE_FRAMES}>
         <Audio src={staticFile('audio/voice.wav')} volume={1} />
       </Sequence>
     </AbsoluteFill>
   );
 };
+
+/** The same film as a 9:16 Instagram reel: phone-width captures, same score and timing. */
+export const MeetingOSVertical: React.FC = () => (
+  <LayoutContext.Provider value={VERTICAL}>
+    <MeetingOSLaunch />
+  </LayoutContext.Provider>
+);

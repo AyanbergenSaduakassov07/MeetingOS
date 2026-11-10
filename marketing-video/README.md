@@ -6,6 +6,8 @@ A 60 s, 1920×1080, 30 fps launch film made with [Remotion](https://remotion.dev
 |---|---|
 | Film (H.264, CRF 16, AAC 320k) | `output/MeetingOS-Launch-Film.mp4` |
 | LinkedIn thumbnail (1920×1080) | `output/MeetingOS-thumbnail.png` |
+| Instagram Reel, 9:16 (1080×1920, −14 LUFS) | `output/MeetingOS-Reel-9x16.mp4` |
+| Reel cover (1080×1920) | `output/MeetingOS-reel-cover.png` |
 
 `output/` is gitignored. Render it locally (below); the finished film and thumbnail were also copied to `~/Desktop`.
 
@@ -17,6 +19,8 @@ bun install            # or npm install
 npm run studio         # live preview with a timeline, at http://localhost:3000
 npm run render         # writes output/MeetingOS-Launch-Film.mp4 (~30 s on an M-series Mac)
 npm run thumbnail      # writes output/MeetingOS-thumbnail.png
+npm run render:reel    # 9:16 reel, loudness-normalised to -14 LUFS for Instagram
+npm run cover          # writes output/MeetingOS-reel-cover.png
 npx tsc -p .           # type check
 ```
 
@@ -35,6 +39,14 @@ npx tsc -p .           # type check
 - **Camera moves:** each `<Shot>` takes `keys`: a list of `{ at: frame, rect: [x, y, w, h] }` in screenshot pixels (3200×2000). The camera eases between them. See `src/components/Shot.tsx`.
 - **If you move a scene cut,** also update `CUTS_S` and `TICKS_S` in `scripts/make_audio.py` and run `npm run audio`, so the score's hits still land on the cuts.
 
+## The 9:16 reel
+
+`MeetingOSVertical` is the same film and timeline rendered through `LayoutContext` (`VERTICAL` in `src/theme.ts`): each scene reads `useLayout()` and swaps in its vertical framing. Content stays between y 220 and y 1500, clear of Instagram's top bar and caption area.
+
+- **Footage:** phone-width captures (480×1000 CSS at 2×) in `public/screenshots/phone/`. The per-meeting copilot is hidden below the `lg` breakpoint, so the copilot beat crops the panel out of the desktop captures; that panel is the real UI.
+- **Cut for height:** the "Target profit" card is left out of the vertical decisions stack. Nothing else changes.
+- **Sound:** uses `public/audio/score-reel.wav`, a phone mix of the same score: saturated pad, a high plucked arpeggio, and a 70 Hz high-pass (phone speakers can't play the sub-bass that carried the original). The rendered file is then normalised with `loudnorm I=-14:TP=-1.5`.
+
 ## Re-capturing the footage
 
 `scripts/capture.py` drives the running app with Playwright at 2× and writes `public/screenshots/`.
@@ -51,6 +63,7 @@ FILM_AMI_WAV=/path/to/ES2002a.wav \
 - **Optional variables:**
   - `MEETINGOS_API_KEY`: only if the backend requires a key. It is read from the environment and is never shown on screen.
   - `FILM_BASE_URL`: the app's address, if it isn't on :5174.
+  - `FILM_SHOTS` / `FILM_VIEWPORT`: output folder and viewport. The reel uses `FILM_SHOTS=screenshots/phone FILM_VIEWPORT=480x1000` with the steps `english languages upload`.
 - **Meeting IDs:** `AMI_ID`, `KK_ID` and `RU_ID` at the top of `capture.py` are the demo meetings in the scratch DB used for filming. Change them to match your own uploads.
 - **Steps:** `english` (dashboard, summary, item cards), `upload` (consent → processing → transcript), `languages` (KK and RU transcript panels), `copilot` (replayed answer frames).
 
@@ -61,6 +74,7 @@ FILM_AMI_WAV=/path/to/ES2002a.wav \
 | File | What it is |
 |---|---|
 | `public/audio/score.wav` | Original score, synthesized from scratch with numpy: a pad, low hits on the cuts, UI ticks, a riser, and a resolve on the logo. It uses no samples and no licensed music. |
+| `public/audio/score-reel.wav` | The reel's phone mix of the same score (see above). |
 | `public/audio/voice.wav` | 6.5 s from the AMI ES2002a meeting ("…selling this remote control for 25 euro"). Built only when `FILM_AMI_WAV` is set. |
 | `src/peaks.json` | The opening's waveform bars, taken from the same meeting. Built only when `FILM_AMI_WAV` is set. |
 

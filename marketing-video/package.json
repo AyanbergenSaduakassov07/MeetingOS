@@ -6,7 +6,9 @@
     "studio": "remotion studio src/index.ts",
     "audio": "../.venv/bin/python scripts/make_audio.py",
     "render": "remotion render src/index.ts MeetingOSLaunch output/MeetingOS-Launch-Film.mp4 --codec=h264 --crf=16 --audio-bitrate=320k",
-    "thumbnail": "remotion still src/index.ts Thumbnail output/MeetingOS-thumbnail.png"
+    "thumbnail": "remotion still src/index.ts Thumbnail output/MeetingOS-thumbnail.png",
+    "render:reel": "remotion render src/index.ts MeetingOSVertical output/MeetingOS-Reel-9x16-raw.mp4 --codec=h264 --crf=16 --audio-bitrate=320k && remotion ffmpeg -y -i output/MeetingOS-Reel-9x16-raw.mp4 -c:v copy -af loudnorm=I=-14:TP=-1.5:LRA=11 -ar 48000 -c:a aac -b:a 320k -movflags +faststart output/MeetingOS-Reel-9x16.mp4 && rm output/MeetingOS-Reel-9x16-raw.mp4",
+    "cover": "remotion still src/index.ts Cover output/MeetingOS-reel-cover.png"
   },
   "dependencies": {
     "@remotion/cli": "^4.0.542",

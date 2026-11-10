@@ -1,6 +1,6 @@
 import { AbsoluteFill, interpolate, useCurrentFrame } from 'remotion';
 import peaks from '../peaks.json';
-import { C, clamp, DISPLAY, fade, settle } from '../theme';
+import { C, clamp, DISPLAY, fade, settle, useLayout } from '../theme';
 
 // 96 s of the AMI meeting's loudness: a real conversation, drawn once.
 const BAR = 8;
@@ -12,17 +12,21 @@ const Line: React.FC<{ from: number; to: number; children: React.ReactNode }> = 
   children,
 }) => {
   const frame = useCurrentFrame();
+  const { vertical } = useLayout();
   return (
     <div
       style={{
         position: 'absolute',
-        top: 360,
+        top: vertical ? 560 : 360,
         width: '100%',
+        padding: vertical ? '0 70px' : 0,
+        boxSizing: 'border-box',
+        lineHeight: 1.1,
         textAlign: 'center',
         fontFamily: DISPLAY,
         fontWeight: 700,
-        fontSize: 70,
-        letterSpacing: -1.4,
+        fontSize: vertical ? 84 : 70,
+        letterSpacing: vertical ? -1.8 : -1.4,
         color: C.ink,
         opacity: fade(frame, from, to, 16),
         translate: `0 ${interpolate(settle(frame, from), [0, 1], [18, 0])}px`,
@@ -35,7 +39,10 @@ const Line: React.FC<{ from: number; to: number; children: React.ReactNode }> = 
 
 export const Opening: React.FC = () => {
   const frame = useCurrentFrame();
+  const layout = useLayout();
   const width = peaks.length * (BAR + GAP) - GAP;
+  // Vertical: the same bars, shrunk to the narrower stage.
+  const fit = Math.min(1, (layout.width - 120) / width);
   return (
     <AbsoluteFill style={{ background: C.stage }}>
       <Line from={14} to={104}>
@@ -47,8 +54,9 @@ export const Opening: React.FC = () => {
       <div
         style={{
           position: 'absolute',
-          left: (1920 - width) / 2,
-          top: 640,
+          left: (layout.width - width) / 2,
+          top: layout.vertical ? 1000 : 640,
+          scale: `${fit} ${layout.vertical ? 1.3 * fit : 1}`,
           height: 150,
           display: 'flex',
           alignItems: 'center',

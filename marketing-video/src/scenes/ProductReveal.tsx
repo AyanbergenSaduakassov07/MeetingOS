@@ -1,12 +1,13 @@
 import { AbsoluteFill, interpolate, useCurrentFrame } from 'remotion';
 import { Caption, Logo } from '../components/Brand';
 import { Shot } from '../components/Shot';
-import { C, clamp, DISPLAY, SANS, settle } from '../theme';
+import { C, clamp, DISPLAY, SANS, settle, useLayout } from '../theme';
 
 const WINDOW_AT = 108;
 
 export const ProductReveal: React.FC = () => {
   const frame = useCurrentFrame();
+  const { vertical } = useLayout();
   const leave = interpolate(frame, [96, 126], [0, 1], { ...clamp });
   const enter = settle(frame, WINDOW_AT);
   return (
@@ -14,8 +15,10 @@ export const ProductReveal: React.FC = () => {
       <div
         style={{
           position: 'absolute',
-          top: 380,
+          top: vertical ? 640 : 380,
           width: '100%',
+          padding: '0 60px',
+          boxSizing: 'border-box',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
@@ -42,7 +45,15 @@ export const ProductReveal: React.FC = () => {
             MeetingOS
           </div>
         </div>
-        <div style={{ fontFamily: SANS, fontSize: 36, color: C.dim, opacity: settle(frame, 36) }}>
+        <div
+          style={{
+            fontFamily: SANS,
+            fontSize: vertical ? 44 : 36,
+            textAlign: 'center',
+            color: C.dim,
+            opacity: settle(frame, 36),
+          }}
+        >
           Meeting intelligence, grounded in the transcript.
         </div>
       </div>
@@ -66,13 +77,23 @@ export const ProductReveal: React.FC = () => {
               scale: 0.9 + 0.1 * enter,
             }}
           >
-            <Shot
-              src="dashboard"
-              keys={[
-                { at: WINDOW_AT, rect: [0, 0, 3200, 2000] },
-                { at: 210, rect: [260, 140, 2720, 1700] },
-              ]}
-            />
+            {vertical ? (
+              <Shot
+                src="phone/dashboard"
+                keys={[
+                  { at: WINDOW_AT, rect: [0, 0, 960, 1060] },
+                  { at: 210, rect: [160, 170, 800, 883] },
+                ]}
+              />
+            ) : (
+              <Shot
+                src="dashboard"
+                keys={[
+                  { at: WINDOW_AT, rect: [0, 0, 3200, 2000] },
+                  { at: 210, rect: [260, 140, 2720, 1700] },
+                ]}
+              />
+            )}
           </div>
         </div>
       )}

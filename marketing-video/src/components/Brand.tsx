@@ -1,6 +1,6 @@
 import type React from 'react';
 import { interpolate, useCurrentFrame } from 'remotion';
-import { C, clamp, DISPLAY, fade, MONO, settle, WINDOW } from '../theme';
+import { C, clamp, DISPLAY, fade, MONO, settle, useLayout } from '../theme';
 
 // web/public/favicon.svg, bar by bar, so the bars can grow in.
 const BARS = [
@@ -47,22 +47,32 @@ export const Caption: React.FC<{ step?: string; text: string; from: number; to: 
   to,
 }) => {
   const frame = useCurrentFrame();
+  const { vertical, window: win } = useLayout();
   const rise = interpolate(settle(frame, from), [0, 1], [14, 0]);
   return (
     <div
       style={{
         position: 'absolute',
-        left: WINDOW.left,
-        top: 46,
+        left: win.left,
+        // Vertical: step above a wrapping line, ending just over the window.
+        ...(vertical
+          ? { bottom: 1920 - win.top + 34, width: win.width, flexDirection: 'column' as const }
+          : { top: 46, alignItems: 'baseline' }),
         display: 'flex',
-        alignItems: 'baseline',
-        gap: 22,
+        gap: vertical ? 14 : 22,
         opacity: fade(frame, from, to),
         translate: `0 ${rise}px`,
       }}
     >
       {step && (
-        <span style={{ fontFamily: MONO, fontSize: 20, color: C.lime, letterSpacing: 1 }}>
+        <span
+          style={{
+            fontFamily: MONO,
+            fontSize: vertical ? 26 : 20,
+            color: C.lime,
+            letterSpacing: 1,
+          }}
+        >
           {step}
         </span>
       )}
@@ -70,9 +80,10 @@ export const Caption: React.FC<{ step?: string; text: string; from: number; to: 
         style={{
           fontFamily: DISPLAY,
           fontWeight: 700,
-          fontSize: 42,
+          fontSize: vertical ? 62 : 42,
+          lineHeight: 1.12,
           color: C.ink,
-          letterSpacing: -0.6,
+          letterSpacing: vertical ? -1 : -0.6,
         }}
       >
         {text}

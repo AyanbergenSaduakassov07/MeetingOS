@@ -23,12 +23,22 @@ from pathlib import Path
 from playwright.sync_api import Page, sync_playwright
 
 BASE = os.environ.get("FILM_BASE_URL", "http://localhost:5174")
-OUT = Path(__file__).resolve().parent.parent / "public" / "screenshots"
+# FILM_SHOTS / FILM_VIEWPORT: the 9:16 reel uses screenshots/phone at 480x1000.
+OUT = (
+    Path(__file__).resolve().parent.parent
+    / "public"
+    / os.environ.get("FILM_SHOTS", "screenshots")
+)
 AMI_WAV = Path(os.environ.get("FILM_AMI_WAV", ""))
 AMI_ID = "1ecc4c32-c10d-43f3-8ceb-bac5c026646c"
 KK_ID = "282f97a6-f7ae-4ff1-908d-9cbe5e72e984"
 RU_ID = "d90441bc-21ec-4ae4-b794-f758021a6eef"  # FLEURS ru_ru dev clips, CC BY 4.0
-VIEWPORT = {"width": 1600, "height": 1000}
+VIEWPORT = dict(
+    zip(
+        ("width", "height"),
+        map(int, os.environ.get("FILM_VIEWPORT", "1600x1000").split("x")),
+    )
+)
 
 QUESTION = "What price and production cost did they agree on?"
 ANSWER = (
@@ -87,6 +97,10 @@ logger = logging.getLogger("capture")
 
 def shot(page: Page, name: str, *, full: bool = False) -> None:
     page.wait_for_timeout(400)  # let transitions settle
+    # A tab click can scroll the narrow page sideways; put it back.
+    page.evaluate(
+        "document.querySelectorAll('*').forEach((e) => { e.scrollLeft = 0; })"
+    )
     page.screenshot(path=str(OUT / f"{name}.png"), full_page=full)
     logger.info("captured %s", name)
 
