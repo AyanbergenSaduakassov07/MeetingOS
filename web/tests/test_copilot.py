@@ -37,11 +37,12 @@ def completed_meeting_id(page) -> str:
 
 
 def stub_ask(page, payload: dict) -> None:
-    """Serve /ask from a fixture so the test does not need model credentials."""
+    """Serve /ask/stream (NDJSON, as the UI reads it) from a fixture: no model credentials."""
+    body = json.dumps({"type": "done", "response": payload}) + "\n"
     page.route(
-        "**/api/meetings/*/ask",
+        "**/api/meetings/*/ask/stream",
         lambda route: route.fulfill(
-            status=200, content_type="application/json", body=json.dumps(payload)
+            status=200, content_type="application/x-ndjson", body=body
         ),
     )
 
