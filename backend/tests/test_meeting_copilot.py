@@ -417,3 +417,35 @@ def test_copilot_module_exposes_no_action_taking_tools():
     # And no writes to anything but the embedding cache.
     assert "db.add(" not in source, "copilot writes rows"
     assert "db.delete(" not in source, "copilot deletes rows"
+
+
+class NoCreditsEmbedder:
+    """The free OpenRouter path: chat works, embeddings answer 402."""
+
+    async def embed(self, texts):
+        from backend.ai.base import ProviderError
+
+        raise ProviderError("OpenAI API error 402: Insufficient credits", status_code=402)
+
+
+@pytest.mark.asyncio
+async def test_short_meeting_is_answered_whole_when_embeddings_are_down(db, meeting):
+    cited = segment_id(db, meeting, 3)
+    llm = FakeLLM(reply("Priya said the sponsor money has not cleared yet.", [cited]))
+
+    result = await copilot.answer_question(
+        meeting.id, "What did Priya say about the sponsor?", db=db, provider=llm, embedder=NoCreditsEmbedder()
+    )
+
+    assert [citation.segment_id for citation in result.citations] == [cited]
+    assert all(text in llm.prompts[0][1] for _, _, text in TRANSCRIPT)
+
+
+@pytest.mark.asyncio
+async def test_long_meeting_still_errors_when_embeddings_are_down(db, meeting, monkeypatch):
+    monkeypatch.setattr(copilot, "FALLBACK_CONTEXT_CHARS", 10)
+
+    with pytest.raises(copilot.CopilotError, match="embedding model could not be reached"):
+        await copilot.answer_question(
+            meeting.id, "Anything?", db=db, provider=FakeLLM(reply("x", [])), embedder=NoCreditsEmbedder()
+        )

@@ -36,6 +36,10 @@ def init_db() -> None:
     def _enable_foreign_keys(dbapi_connection, _connection_record) -> None:
         cursor = dbapi_connection.cursor()
         cursor.execute("PRAGMA foreign_keys = ON")
+        # Background ingestion and extraction write concurrently with API reads:
+        # WAL lets readers proceed during a write, the timeout lets writers queue.
+        cursor.execute("PRAGMA journal_mode = WAL")
+        cursor.execute("PRAGMA busy_timeout = 30000")
         cursor.close()
 
     SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)

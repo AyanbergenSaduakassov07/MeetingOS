@@ -2,27 +2,31 @@ import { useQuery } from '@tanstack/react-query';
 import { AlertCircle, AlertTriangle, Loader2 } from 'lucide-react';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import { CitationTime } from '@/components/CitationTime';
 import { CopilotPanel } from '@/components/CopilotPanel';
 import { ItemCard, type ItemKind } from '@/components/ItemCard';
 import { PlayerBar } from '@/components/PlayerBar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { api, type ExtractedItem } from '@/lib/api';
+import { ApiError, api, type ExtractedItem } from '@/lib/api';
 import { formatTimestamp } from '@/lib/playback';
 
 const TABS = ['summary', 'decisions', 'actions', 'risks', 'transcript'] as const;
+
+const isNotFound = (error: unknown) => error instanceof ApiError && error.status === 404;
 
 function StateCard({
   icon,
   title,
   detail,
   testId,
+  children,
 }: {
   icon: React.ReactNode;
   title: string;
   detail?: string | null;
   testId: string;
+  children?: React.ReactNode;
 }) {
   return (
     <output
@@ -32,6 +36,7 @@ function StateCard({
       {icon}
       <h2 className="font-display text-lg font-bold">{title}</h2>
       {detail && <p className="text-sm text-muted-foreground">{detail}</p>}
+      {children}
     </output>
   );
 }
@@ -51,7 +56,7 @@ function ItemList({ items, kind }: { items: ExtractedItem[]; kind: ItemKind }) {
 }
 
 export function MeetingDetail() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { meetingId = '' } = useParams();
 
   const meeting = useQuery({
@@ -59,16 +64,22 @@ export function MeetingDetail() {
     queryFn: () => api.getMeeting(meetingId),
     // A processing meeting becomes a completed one without the user acting,
     // so poll until it settles rather than making them reload.
+    // Errors keep the last data, so a deleted meeting would otherwise be polled forever.
     refetchInterval: (query) =>
-      query.state.data?.status === 'processing' || query.state.data?.status === 'queued'
+      !isNotFound(query.state.error) &&
+      ['processing', 'queued', 'analyzing'].includes(query.state.data?.status ?? '')
         ? 3000
         : false,
+    retry: (count, error) => !isNotFound(error) && count < 3,
   });
 
-  const settled = meeting.data?.status === 'completed';
+  const status = meeting.data?.status;
+  // 'analyzing': the transcript is ready, extraction is still running.
+  const settled = status === 'completed' || status === 'analyzing';
 
   const intelligence = useQuery({
-    queryKey: ['intelligence', meetingId],
+    // Keyed on status so the report refetches when extraction finishes.
+    queryKey: ['intelligence', meetingId, status],
     queryFn: () => api.getIntelligence(meetingId),
     enabled: settled,
   });
@@ -106,9 +117,20 @@ export function MeetingDetail() {
       <StateCard
         testId="state-error"
         icon={<AlertCircle aria-hidden="true" className="size-6 text-destructive" />}
-        title={t('meetings.loadFailed')}
-        detail={meeting.error instanceof Error ? meeting.error.message : undefined}
-      />
+        title={t(isNotFound(meeting.error) ? 'meetings.notFound' : 'meetings.loadFailed')}
+        detail={
+          !isNotFound(meeting.error) && meeting.error instanceof Error
+            ? meeting.error.message
+            : undefined
+        }
+      >
+        <Link
+          to="/meetings"
+          className="text-sm font-medium underline underline-offset-2 hover:text-primary"
+        >
+          {t('meetings.backToList')}
+        </Link>
+      </StateCard>
     );
   }
 
@@ -157,7 +179,9 @@ export function MeetingDetail() {
               <div className="flex gap-1.5">
                 <dt>{t('meetings.recorded')}:</dt>
                 <dd className="font-mono tabular-nums">
-                  {data.created_at ? new Date(data.created_at).toLocaleDateString() : '—'}
+                  {data.created_at
+                    ? new Date(data.created_at).toLocaleDateString(i18n.language)
+                    : '—'}
                 </dd>
               </div>
               <div className="flex gap-1.5">
@@ -171,6 +195,21 @@ export function MeetingDetail() {
                 <dd className="font-mono tabular-nums">{speakerCount || '—'}</dd>
               </div>
             </dl>
+            {status === 'analyzing' && (
+              <output
+                data-testid="extraction-running"
+                className="mt-3 flex items-start gap-2 rounded-md border border-border bg-muted/50 px-3 py-2 text-sm"
+              >
+                <Loader2
+                  aria-hidden="true"
+                  className="mt-0.5 size-4 shrink-0 animate-spin text-primary"
+                />
+                <div>
+                  <p className="font-medium">{t('meetings.analyzingTitle')}</p>
+                  <p className="text-muted-foreground">{t('meetings.analyzingDetail')}</p>
+                </div>
+              </output>
+            )}
             {/* Transcript is fine but extraction was partial: zero items must not read as "nothing decided". */}
             {data.processing_error && (
               <div
@@ -210,7 +249,7 @@ export function MeetingDetail() {
                       <div key={key} className="rounded-lg border border-border bg-card p-4">
                         <dt className="text-sm text-muted-foreground">{t(key)}</dt>
                         <dd className="mt-1 font-display text-2xl font-black tabular-nums">
-                          {count}
+                          {status === 'analyzing' && count === 0 ? '—' : count}
                         </dd>
                       </div>
                     ))}

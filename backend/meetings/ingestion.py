@@ -72,6 +72,30 @@ def schedule_processing(meeting_id: str) -> None:
     task.add_done_callback(_background_tasks.discard)
 
 
+def resume_interrupted() -> int:
+    """Re-queue meetings a restart left mid-pipeline; they would otherwise spin forever.
+
+    Background tasks live in memory, so nothing else will ever finish them. Transcription
+    reruns from the stored audio (the transcript write replaces old rows).
+    """
+    from ..database import new_session
+
+    db: Session = new_session()
+    try:
+        stuck = [
+            meeting_id
+            for (meeting_id,) in db.query(Meeting.id).filter(
+                Meeting.status.in_([MeetingStatus.PROCESSING.value, MeetingStatus.ANALYZING.value])
+            )
+        ]
+    finally:
+        db.close()
+    for meeting_id in stuck:
+        logger.info("Resuming meeting %s interrupted by a restart", meeting_id)
+        schedule_processing(meeting_id)
+    return len(stuck)
+
+
 async def process_meeting(
     meeting_id: str,
     *,
@@ -110,7 +134,8 @@ async def process_meeting(
 
         _write_transcript(db, meeting, result)
 
-        meeting.status = MeetingStatus.COMPLETED.value
+        # The transcript is readable now, but an empty report must not look final while the LLM runs.
+        meeting.status = (MeetingStatus.ANALYZING if run_segmentation else MeetingStatus.COMPLETED).value
         meeting.audio_duration_seconds = _duration_seconds(result)
         meeting.language = result.language or meeting.language
         meeting.processing_error = None
@@ -187,7 +212,7 @@ def _summarize_problems(problems: list[str]) -> str | None:
 
 
 def _record_extraction_problems(meeting_id: str, problems: list[str]) -> None:
-    """Store why extraction was incomplete on the meeting; the status stays ``completed``."""
+    """Mark extraction finished, storing why it was incomplete; the status becomes ``completed``."""
     from ..database import new_session
 
     db: Session = new_session()
@@ -196,6 +221,7 @@ def _record_extraction_problems(meeting_id: str, problems: list[str]) -> None:
         if meeting is None:
             return
         meeting.processing_error = _summarize_problems(problems)
+        meeting.status = MeetingStatus.COMPLETED.value
         db.commit()
     finally:
         db.close()

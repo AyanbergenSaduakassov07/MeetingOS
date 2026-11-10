@@ -51,3 +51,25 @@ def test_upload_with_consent_records_when_and_how(client, db, org):
     assert body["consent_note"] == "Verbal, start of call"
     meeting = db.query(Meeting).one()
     assert meeting.consent_confirmed_at is not None
+
+
+def test_upload_without_language_leaves_it_for_auto_detect(client, db, org):
+    response = _upload(client, org, consent_confirmed="true")
+
+    assert response.status_code == 202, response.text
+    assert db.query(Meeting).one().language is None
+
+
+def test_upload_stores_a_kazakh_language_hint(client, db, org):
+    response = _upload(client, org, consent_confirmed="true", language="kk")
+
+    assert response.status_code == 202, response.text
+    assert db.query(Meeting).one().language == "kk"
+
+
+def test_upload_with_unknown_language_is_refused_and_stores_nothing(client, db, org):
+    response = _upload(client, org, consent_confirmed="true", language="klingon")
+
+    assert response.status_code == 400
+    assert "auto-detect" in response.text
+    assert db.query(Meeting).count() == 0

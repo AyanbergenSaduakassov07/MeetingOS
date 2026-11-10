@@ -8,8 +8,10 @@ from pathlib import Path
 from typing import ClassVar
 from urllib.parse import quote
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from . import __version__, auth, config, database
 from .routes import register_routers
@@ -55,6 +57,12 @@ def safe_content_disposition(disposition_type: str, filename: str) -> str:
     return f"{disposition_type}; filename=\"{ascii_name}\"; filename*=UTF-8''{utf8_name}"
 
 
+async def _validation_error(_request: Request, exc: RequestValidationError) -> JSONResponse:
+    """422 without echoing the input: the default handler crashes (500) on binary bodies."""
+    errors = [{key: error[key] for key in ("loc", "msg", "type") if key in error} for error in exc.errors()]
+    return JSONResponse(status_code=422, content={"detail": errors})
+
+
 def create_app() -> FastAPI:
     """Create and configure the FastAPI application."""
     from .mcp_server.server import build_mcp_server, compose_lifespan
@@ -93,6 +101,7 @@ def create_app() -> FastAPI:
     _configure_cors(application)
     application.include_router(auth.router)
     register_routers(application)
+    application.add_exception_handler(RequestValidationError, _validation_error)
     application.mount("/mcp", mcp_app)
     logger.info("MCP: mounted at /mcp")
     _mount_frontend(application)
@@ -188,6 +197,9 @@ async def _run_startup(application: FastAPI) -> None:
 
     database.init_db()
     database.ensure_default_org()
+    from .meetings.ingestion import resume_interrupted
+
+    resume_interrupted()
     logger.info("Data directory: %s", config.get_data_dir())
 
     _log_provider_selection()

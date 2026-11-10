@@ -61,11 +61,27 @@ export function Dashboard() {
           {t('dashboard.decisionsHeading')}
         </h2>
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
-          <StatCard stat={data.decisions_approved} testId="stat-approved" />
-          <StatCard stat={data.decisions_pending} testId="stat-pending" />
-          <StatCard stat={data.decisions_reversed} testId="stat-reversed" />
-          <StatCard stat={data.overdue_commitments} testId="stat-overdue" />
-          <StatCard stat={data.open_risks} testId="stat-risks" />
+          <StatCard
+            stat={data.decisions_approved}
+            label={t('dashboard.statApproved')}
+            testId="stat-approved"
+          />
+          <StatCard
+            stat={data.decisions_pending}
+            label={t('dashboard.statPending')}
+            testId="stat-pending"
+          />
+          <StatCard
+            stat={data.decisions_reversed}
+            label={t('dashboard.statReversed')}
+            testId="stat-reversed"
+          />
+          <StatCard
+            stat={data.overdue_commitments}
+            label={t('dashboard.statOverdue')}
+            testId="stat-overdue"
+          />
+          <StatCard stat={data.open_risks} label={t('dashboard.statRisks')} testId="stat-risks" />
         </div>
       </section>
 

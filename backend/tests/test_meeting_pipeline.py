@@ -289,6 +289,21 @@ def test_transcription_failure_marks_meeting_failed(db, org, data_dir):
     assert db.query(TranscriptSegment).filter_by(meeting_id=meeting_id).count() == 0
 
 
+def test_restart_requeues_meetings_left_mid_pipeline(db, org, data_dir, monkeypatch):
+    """Processing/analyzing meetings are resumed on startup; finished ones are left alone."""
+    from backend.meetings import ingestion
+
+    statuses = [MeetingStatus.PROCESSING, MeetingStatus.ANALYZING, MeetingStatus.COMPLETED, MeetingStatus.FAILED]
+    meetings = [Meeting(org_id=org.id, title=s.value, status=s.value) for s in statuses]
+    db.add_all(meetings)
+    db.commit()
+    scheduled: list[str] = []
+    monkeypatch.setattr(ingestion, "schedule_processing", scheduled.append)
+
+    assert ingestion.resume_interrupted() == 2
+    assert sorted(scheduled) == sorted([meetings[0].id, meetings[1].id])
+
+
 def test_unexpected_error_also_marks_failed(db, org, data_dir):
     """Not just TranscriptionError — any exception must land the meeting in `failed`."""
     from backend.meetings import ingestion
@@ -576,7 +591,7 @@ def test_failed_extraction_is_recorded_not_shown_as_empty(db, org, monkeypatch):
         report = intelligence.ExtractionReport(meeting_id=mid)
         report.errors = [
             f"{kind} extraction failed: ANTHROPIC_API_KEY is not set." for kind in ("decision", "risk")
-        ] + ["verification failed: no embedder"]
+        ] + ["items were not fact-checked against the transcript: no embedder"]
         return report
 
     monkeypatch.setattr(intelligence, "extract_meeting_intelligence", failing)
@@ -587,7 +602,7 @@ def test_failed_extraction_is_recorded_not_shown_as_empty(db, org, monkeypatch):
     assert meeting.status == MeetingStatus.COMPLETED.value
     assert meeting.processing_error == (
         "Extraction incomplete. decision, risk not extracted: ANTHROPIC_API_KEY is not set. "
-        "verification failed: no embedder"
+        "items were not fact-checked against the transcript: no embedder"
     )
 
 
@@ -606,3 +621,37 @@ def test_clean_extraction_clears_an_old_problem(db, org, monkeypatch):
 
     db.expire_all()
     assert db.get(Meeting, meeting_id).processing_error is None
+
+
+def test_status_is_analyzing_while_extraction_runs(db, org, data_dir, monkeypatch):
+    """An empty report must not show as final while the language model is still extracting."""
+    from backend.database import new_session
+    from backend.meetings import ingestion, intelligence
+
+    audio = data_dir / "recordings" / "analyzing.wav"
+    audio.parent.mkdir(parents=True, exist_ok=True)
+    audio.write_bytes(_wav_bytes(seconds=9))
+    meeting = Meeting(org_id=org.id, title="Analyzing", status=MeetingStatus.PROCESSING.value)
+    meeting.recording_path = config.to_storage_path(audio)
+    db.add(meeting)
+    db.commit()
+    meeting_id = meeting.id
+    seen: list[str] = []
+
+    async def no_segmentation(_meeting_id):
+        return None
+
+    async def record_status(_meeting_id):
+        session = new_session()
+        seen.append(session.query(Meeting).filter(Meeting.id == _meeting_id).one().status)
+        session.close()
+        return intelligence.ExtractionReport(meeting_id=_meeting_id)
+
+    monkeypatch.setattr(ingestion, "_try_segment", no_segmentation)
+    monkeypatch.setattr(intelligence, "extract_meeting_intelligence", record_status)
+    provider = FakeTranscriber(segments=_three_segments(), supports_diarization=False)
+    asyncio.run(asyncio.wait_for(ingestion.process_meeting(meeting_id, provider=provider), timeout=10))
+
+    db.expire_all()
+    assert seen == [MeetingStatus.ANALYZING.value]
+    assert db.query(Meeting).filter(Meeting.id == meeting_id).one().status == MeetingStatus.COMPLETED.value

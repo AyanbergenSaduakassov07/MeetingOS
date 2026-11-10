@@ -354,6 +354,42 @@ def test_extraction_runs_per_topic(db, meeting, segments):
     assert len(llm.calls) == 8  # 2 topics x 4 schemas
 
 
+def test_long_meeting_is_read_in_windows_not_cut(db, meeting, segments, monkeypatch):
+    """Segments past the per-call cap still reach the model (real AMI run lost 210 of 330)."""
+    monkeypatch.setattr(intelligence, "MAX_SEGMENTS_PER_CALL", 3)
+
+    llm = FakeLLM()
+    report = _run(intelligence.extract_meeting_intelligence(meeting.id, provider=llm, run_verification=False))
+
+    assert report.topics_processed == 2  # 4 segments -> windows of 3 + 1
+    prompts = "\n".join(prompt for _schema, prompt, _system in llm.calls)
+    assert segments[-1].id in prompts
+
+
+def test_prompt_names_the_language_of_a_single_language_excerpt(db, meeting, segments):
+    """A Russian excerpt asks for Russian output; the English frame must not win."""
+    for segment in segments:
+        segment.language = "ru"
+    db.commit()
+
+    llm = FakeLLM()
+    _run(intelligence.extract_meeting_intelligence(meeting.id, provider=llm, run_verification=False))
+
+    assert all("language code 'ru'" in prompt for _schema, prompt, _system in llm.calls)
+
+
+def test_verbatim_repeat_from_the_model_is_stored_once(db, meeting, segments):
+    """The same claim on the same segment twice (free model looping) yields one row."""
+    item = intelligence.ExtractedDecision(
+        segment_id=segments[0].id, quote="move the showcase", confidence=0.9, title="Move the showcase", status="agreed"
+    )
+    llm = FakeLLM({intelligence.DecisionList: intelligence.DecisionList(items=[item, item.model_copy()])})
+
+    report = _run(intelligence.extract_meeting_intelligence(meeting.id, provider=llm, run_verification=False))
+
+    assert report.decisions == 1
+
+
 # ── untrusted transcript content ──────────────────────────────────────────
 
 
@@ -581,3 +617,40 @@ def test_invented_quote_is_not_rescued_by_the_score(db, meeting, segments):
     assert quote_support("we approved five hundred pounds", segments[0].text) < 0.8
     assert quote_support("We agreed to move the showcase", segments[0].text) == 1.0
     assert quote_support(None, segments[0].text) == 0.0
+
+
+def test_extraction_holds_no_write_lock_while_the_model_runs(db, meeting, segments):
+    """A slow model must not lock SQLite: other meetings' ingestion writes meanwhile."""
+    import sqlite3
+
+    from backend.database import session as db_session
+
+    class WritingLLM(FakeLLM):
+        async def extract(self, prompt, schema, *, system=None, max_tokens=None):
+            other = sqlite3.connect(db_session._db_path, timeout=0)
+            try:
+                other.execute("UPDATE meetings SET title = title WHERE id = ?", (meeting.id,))
+                other.commit()  # raises "database is locked" if extraction holds a write transaction
+            finally:
+                other.close()
+            return await super().extract(prompt, schema, system=system, max_tokens=max_tokens)
+
+    first = FakeLLM(
+        {
+            DecisionList: DecisionList(
+                items=[
+                    ExtractedDecision(
+                        segment_id=segments[0].id,
+                        quote="move the showcase",
+                        confidence=0.9,
+                        title="Move",
+                        status="agreed",
+                    )
+                ]
+            )
+        }
+    )
+    _run(intelligence.extract_meeting_intelligence(meeting.id, provider=first, run_verification=False))
+    report = _run(intelligence.extract_meeting_intelligence(meeting.id, provider=WritingLLM(), run_verification=False))
+
+    assert report.errors == []

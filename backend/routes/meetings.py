@@ -61,6 +61,11 @@ MAX_UPLOAD_BYTES = int(os.environ.get("MEETINGOS_MAX_UPLOAD_BYTES", 250 * 1024 *
 # determines the name on disk.
 ALLOWED_AUDIO_EXTS = {".wav", ".mp3", ".m4a", ".ogg", ".flac", ".aac", ".webm", ".opus"}
 
+# Spoken-language hints the upload accepts (Whisper codes). No hint means
+# auto-detect: forcing "en" on a Russian or Kazakh recording makes Whisper
+# translate or garble it instead of transcribing.
+SPOKEN_LANGUAGES = {"en", "ru", "kk", "uz", "ky", "tr", "uk", "de", "fr", "es", "zh", "ar"}
+
 
 class MeetingSummary(BaseModel):
     """A meeting as it appears in a list."""
@@ -178,9 +183,6 @@ class MeetingIntelligence(BaseModel):
 
     meeting_id: str
     meeting_status: str
-    # True when any topic was too long to extract in full. The counts below are
-    # then a floor, not a total.
-    extraction_truncated: bool = False
     topics: list[TopicOut] = []
     decisions: list[ExtractedItem] = []
     action_items: list[ExtractedItem] = []
@@ -328,6 +330,12 @@ async def upload_meeting(
             detail="Confirm that everyone in the recording consented to it (consent_confirmed=true).",
         )
     suffix = _validate_audio_suffix(file.filename)
+    if language and language not in SPOKEN_LANGUAGES:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Unsupported language '{language}'. Leave it empty to auto-detect, or use one of: "
+            + ", ".join(sorted(SPOKEN_LANGUAGES)),
+        )
     organization = _resolve_org(db, org_id)
 
     meeting = Meeting(
@@ -335,7 +343,7 @@ async def upload_meeting(
         title=title,
         status=MeetingStatus.PROCESSING.value,
         source=MeetingSource.UPLOAD.value,
-        language=language or "en",
+        language=language or None,  # None = let the transcriber detect it
         consent_confirmed_at=datetime.now(UTC),
         consent_note=(consent_note or "").strip() or None,
     )
@@ -441,26 +449,9 @@ async def get_meeting_intelligence(meeting_id: str, db: Session = Depends(get_db
 
     topics = db.query(Topic).filter_by(meeting_id=meeting_id).order_by(Topic.start_ms).all()
 
-    # A topic longer than the extraction cap means the counts are a floor.
-    # Recomputed here rather than stored, so it stays true if segments change.
-    from ..meetings.intelligence import MAX_SEGMENTS_PER_CALL
-
-    truncated = any(
-        db.query(TranscriptSegment)
-        .filter(
-            TranscriptSegment.meeting_id == meeting_id,
-            TranscriptSegment.end_ms > (topic.start_ms or 0),
-            TranscriptSegment.start_ms < (topic.end_ms or 2**31),
-        )
-        .count()
-        > MAX_SEGMENTS_PER_CALL
-        for topic in topics
-    )
-
     return MeetingIntelligence(
         meeting_id=meeting_id,
         meeting_status=meeting.status,
-        extraction_truncated=truncated,
         topics=[
             TopicOut(
                 id=topic.id,

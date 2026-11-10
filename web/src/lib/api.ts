@@ -8,7 +8,7 @@
 
 const BASE = import.meta.env.VITE_API_URL ?? '';
 
-export type MeetingStatus = 'processing' | 'completed' | 'failed' | 'queued' | string;
+export type MeetingStatus = 'processing' | 'analyzing' | 'completed' | 'failed' | 'queued' | string;
 
 export type VerificationStatus =
   | 'verified'
@@ -325,12 +325,18 @@ export const api = {
   ask: (id: string, question: string) =>
     sendJson<AskResponse>('POST', `/api/meetings/${id}/ask`, { question }),
 
-  uploadMeeting(file: File, title: string, consentNote: string): Promise<MeetingDetail> {
+  uploadMeeting(
+    file: File,
+    title: string,
+    consentNote: string,
+    language: string | null = null,
+  ): Promise<MeetingDetail> {
     const form = new FormData();
     form.append('file', file);
     form.append('title', title);
     form.append('consent_confirmed', 'true');
     if (consentNote.trim()) form.append('consent_note', consentNote.trim());
+    if (language) form.append('language', language);
     return request<MeetingDetail>('/api/meetings/upload', { method: 'POST', body: form });
   },
 };

@@ -13,7 +13,7 @@ import { cn } from '@/lib/utils';
  * over-trust, and over-trusted redaction is worse than none.
  */
 export function PrivacySettings() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const queryClient = useQueryClient();
   const privacy = useQuery({ queryKey: ['privacy'], queryFn: api.getPrivacy });
 
@@ -125,7 +125,13 @@ export function PrivacySettings() {
           </button>
         </div>
         <p className="mt-1 text-xs text-muted-foreground">
-          {t('privacy.configSource', { source: data.redaction.source })}
+          {t('privacy.configSource', {
+            source: t(
+              data.redaction.source === 'settings'
+                ? 'privacy.configSourceSettings'
+                : 'privacy.configSourceEnvironment',
+            ),
+          })}
         </p>
 
         {/* A ticked green rule under a master switch that is off would read as
@@ -295,7 +301,9 @@ export function PrivacySettings() {
                 {data.recent_calls.map((call) => (
                   <tr key={call.id} className="border-b border-border/60" data-testid="audit-row">
                     <td className="py-2 pr-3 font-mono text-xs tabular-nums text-muted-foreground">
-                      {call.created_at ? new Date(call.created_at).toLocaleString() : '—'}
+                      {call.created_at
+                        ? new Date(call.created_at).toLocaleString(i18n.language)
+                        : '—'}
                     </td>
                     <td className="py-2 pr-3">{call.provider}</td>
                     <td className="py-2 pr-3 text-muted-foreground">{call.operation}</td>

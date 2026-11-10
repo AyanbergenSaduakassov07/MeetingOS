@@ -49,7 +49,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
@@ -71,9 +71,9 @@ from .redaction import redact_for_egress
 
 logger = logging.getLogger(__name__)
 
-# Cap the transcript handed to one extract call. A topic that runs longer than
-# this is truncated rather than silently blowing the context window; the
-# boundary is logged so it is visible in the extraction record.
+# Cap the transcript handed to one extract call. A longer topic (or a whole
+# meeting when topic segmentation is unavailable) is split into windows of
+# this size so every segment is read without blowing the context window.
 MAX_SEGMENTS_PER_CALL = 120
 
 
@@ -182,8 +182,11 @@ Rules:
   from that segment that support it. Never cite a segment id that is not in
   the excerpt.
 - Do not merge several statements into one item, and do not split one
-  statement into several.
-- Set confidence honestly. Use a low value when the wording is ambiguous."""
+  statement into several. Never repeat an item; stop when nothing new remains.
+- Set confidence honestly. Use a low value when the wording is ambiguous.
+- Meetings may be in any language, or mix several (English, Russian, Kazakh
+  and others). Write each item in the language of the segment it cites, and
+  copy the quote exactly as written there. Never translate."""
 
 
 @dataclass
@@ -197,10 +200,6 @@ class ExtractionReport:
     commitments: int = 0
     topics_processed: int = 0
     rejected_citations: int = 0
-    # True when a topic ran past MAX_SEGMENTS_PER_CALL and the tail was never
-    # read. A reader seeing "3 decisions" has no way to know the last forty
-    # minutes were skipped unless this travels with the result.
-    truncated: bool = False
     # False when the verifier could not run (no embedding credentials, say).
     # Items are then left `unverified`, which must not be read as "checked".
     verification_ran: bool = False
@@ -246,8 +245,26 @@ def _build_prompt(kind_description: str, segments: list[TranscriptSegment]) -> s
         f"{_render_segments(segments)}\n"
         "--- END TRANSCRIPT EXCERPT ---\n\n"
         "Return only items supported by the excerpt above, each citing one of "
-        "its segment ids."
+        "its segment ids. List each item once."
+        f"{_language_instruction(segments)}"
     )
+
+
+def _item_text(item: BaseModel) -> str:
+    """The claim itself: commitments carry `text`, every other kind a `title`."""
+    return getattr(item, "title", None) or getattr(item, "text", "")
+
+
+def _language_instruction(segments: list[TranscriptSegment]) -> str:
+    """Name the excerpt's language when it has exactly one.
+
+    The frame around the transcript is English, and free models followed that
+    over the system prompt's "never translate" (real RU run: decisions came out in English).
+    """
+    languages = {segment.language for segment in segments if segment.language}
+    if len(languages) != 1:
+        return ""
+    return f" The excerpt is in language code '{languages.pop()}': write every text field in that language."
 
 
 def extractors_for(db: Session, meeting: Meeting) -> dict[str, tuple[type[BaseModel], str]]:
@@ -380,7 +397,7 @@ def _persist(
     elif kind == "commitment":
         committer = _resolve_user(db, meeting.org_id, item.committer_name)
         text = item.text
-        if item.due_date_text:
+        if item.due_date_text and item.due_date_text != item.text:
             text = f"{text} (due as stated: {item.due_date_text})"
         db.add(Commitment(committer_id=committer.id if committer else None, text=text, **common))
     elif kind == "resolution":
@@ -497,21 +514,15 @@ async def extract_meeting_intelligence(
                 ", ".join(sorted(set(extractors) - set(_EXTRACTORS))),
             )
 
-        _clear_previous(db, meeting_id)
-
-        for segments in batches:
-            if not segments:
-                continue
-            if len(segments) > MAX_SEGMENTS_PER_CALL:
-                report.truncated = True
-                logger.warning(
-                    "Topic in meeting %s has %d segments; truncating to %d for extraction",
-                    meeting_id,
-                    len(segments),
-                    MAX_SEGMENTS_PER_CALL,
-                )
-                segments = segments[:MAX_SEGMENTS_PER_CALL]
-
+        # LLM calls run before any write: a write transaction held across minutes of slow
+        # model calls locks SQLite and fails other meetings' ingestion ("database is locked").
+        extracted: list[tuple[str, Any, set[str]]] = []
+        windows = [
+            segments[start : start + MAX_SEGMENTS_PER_CALL]
+            for segments in batches
+            for start in range(0, len(segments), MAX_SEGMENTS_PER_CALL)
+        ]
+        for segments in windows:
             valid_ids = {segment.id for segment in segments}
             report.topics_processed += 1
 
@@ -523,17 +534,25 @@ async def extract_meeting_intelligence(
                     logger.warning("Meeting %s: %s", meeting_id, message)
                     report.errors.append(message)
                     continue
+                extracted.extend((kind, item, valid_ids) for item in items)
 
-                for item in items:
-                    if not _persist(db, meeting, kind, item, valid_ids):
-                        report.rejected_citations += 1
-                        logger.warning(
-                            "Meeting %s: %s item cited unknown segment %r — marked unsupported",
-                            meeting_id,
-                            kind,
-                            item.segment_id,
-                        )
-                    setattr(report, _COUNTER_FIELD[kind], getattr(report, _COUNTER_FIELD[kind]) + 1)
+        _clear_previous(db, meeting_id)
+        seen: set[tuple[str, str, str]] = set()
+        for kind, item, valid_ids in extracted:
+            # Free models repeat items verbatim (real KK run); one row per claim.
+            key = (kind, item.segment_id, " ".join(_item_text(item).lower().split()))
+            if key in seen:
+                continue
+            seen.add(key)
+            if not _persist(db, meeting, kind, item, valid_ids):
+                report.rejected_citations += 1
+                logger.warning(
+                    "Meeting %s: %s item cited unknown segment %r — marked unsupported",
+                    meeting_id,
+                    kind,
+                    item.segment_id,
+                )
+            setattr(report, _COUNTER_FIELD[kind], getattr(report, _COUNTER_FIELD[kind]) + 1)
 
         db.commit()
     finally:
@@ -577,7 +596,7 @@ async def extract_meeting_intelligence(
             # Every row stays `unverified`, which is honest but easy to mistake
             # for "checked and fine". Say so on the report as well as in the log.
             logger.warning("Verification did not run for meeting %s: %s", meeting_id, exc)
-            report.errors.append(f"verification failed: {exc}")
+            report.errors.append(f"items were not fact-checked against the transcript: {exc}")
 
     return report
 

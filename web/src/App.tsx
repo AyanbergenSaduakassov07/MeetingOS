@@ -44,6 +44,7 @@ export default function App() {
               <Route path="/settings/privacy" element={<PrivacySettings />} />
               <Route path="/meetings" element={<MeetingsList />} />
               <Route path="/meetings/:meetingId" element={<MeetingDetail />} />
+              <Route path="*" element={<Navigate to="/dashboard" replace />} />
             </Routes>
           </main>
         </div>

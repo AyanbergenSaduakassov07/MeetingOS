@@ -2,7 +2,8 @@
 
 The shape of the thing: embed the question, retrieve the handful of transcript
 segments closest to it, and hand the model *only* those segments. Never the
-whole transcript.
+whole transcript, except a short one when no embedder is reachable
+(``FALLBACK_CONTEXT_CHARS``).
 
 Why a budget rather than the whole transcript
 ---------------------------------------------
@@ -75,6 +76,9 @@ logger = logging.getLogger(__name__)
 # more than an order of magnitude between a "yeah" and a two-minute answer.
 MAX_SEGMENTS = 12
 MAX_CONTEXT_CHARS = 6000
+# Used only when the embedder is down (e.g. OpenRouter, which serves none): ~5k tokens,
+# roughly a 20-minute meeting, still short enough that recall holds up.
+FALLBACK_CONTEXT_CHARS = 20000
 
 # Below this cosine similarity a segment is not considered related to the
 # question at all. Set deliberately low: the model is instructed to refuse when
@@ -250,6 +254,12 @@ def _retrieve(
     return chosen, len(candidates)
 
 
+def _whole_transcript_if_short(db: Session, meeting_id: str) -> list[TranscriptSegment] | None:
+    """Without embeddings there is no retrieval; a meeting this short fits the prompt whole."""
+    segments = db.query(TranscriptSegment).filter_by(meeting_id=meeting_id).order_by(TranscriptSegment.sequence).all()
+    return segments if sum(len(segment.text) for segment in segments) <= FALLBACK_CONTEXT_CHARS else None
+
+
 def _render_excerpt(segments: list[TranscriptSegment], labels: dict[str, str]) -> str:
     """Render retrieved segments, fenced and labelled as untrusted data.
 
@@ -349,11 +359,15 @@ async def answer_question(
             await ensure_segment_embeddings(db, meeting_id, embedder=embedder)
             question_vectors = await embedder.embed(redact_many_for_egress([question]))
         except ProviderError as exc:
-            raise CopilotError(f"The embedding model could not be reached: {exc}") from exc
-        if not question_vectors:
-            raise CopilotError("Embedder returned no vector for the question.")
-
-        segments, considered = _retrieve(db, meeting_id, question_vectors[0])
+            segments = _whole_transcript_if_short(db, meeting_id)
+            if segments is None:
+                raise CopilotError(f"The embedding model could not be reached: {exc}") from exc
+            logger.warning("Embeddings unavailable (%s); answering over the whole short transcript", exc)
+            considered = len(segments)
+        else:
+            if not question_vectors:
+                raise CopilotError("Embedder returned no vector for the question.")
+            segments, considered = _retrieve(db, meeting_id, question_vectors[0])
 
         if not segments:
             # Nothing crossed the similarity floor. Answer honestly here rather

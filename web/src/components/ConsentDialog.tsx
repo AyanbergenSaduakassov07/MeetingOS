@@ -11,12 +11,37 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+
+// Whisper codes the server accepts; names are endonyms so they need no translation.
+const SPOKEN_LANGUAGES = [
+  ['en', 'English'],
+  ['ru', 'Русский'],
+  ['kk', 'Қазақша'],
+  ['uz', 'Oʻzbekcha'],
+  ['ky', 'Кыргызча'],
+  ['tr', 'Türkçe'],
+  ['uk', 'Українська'],
+  ['de', 'Deutsch'],
+  ['fr', 'Français'],
+  ['es', 'Español'],
+  ['zh', '中文'],
+  ['ar', 'العربية'],
+] as const;
+const AUTO = 'auto';
 
 interface ConsentDialogProps {
   file: File | null;
   onCancel: () => void;
-  onConfirm: (file: File, note: string) => void;
+  /** `language` is a Whisper code, or null to auto-detect. */
+  onConfirm: (file: File, note: string, language: string | null) => void;
 }
 
 /** The server refuses uploads without consent; this is where the user gives it. */
@@ -24,10 +49,16 @@ export function ConsentDialog({ file, onCancel, onConfirm }: ConsentDialogProps)
   const { t } = useTranslation();
   const [agreed, setAgreed] = useState(false);
   const [note, setNote] = useState('');
+  const [language, setLanguage] = useState<string>(AUTO);
 
-  const close = () => {
+  const reset = () => {
     setAgreed(false);
     setNote('');
+    setLanguage(AUTO);
+  };
+
+  const close = () => {
+    reset();
     onCancel();
   };
 
@@ -54,6 +85,24 @@ export function ConsentDialog({ file, onCancel, onConfirm }: ConsentDialogProps)
         </div>
 
         <div className="space-y-1.5">
+          <Label htmlFor="upload-language">{t('consent.languageLabel')}</Label>
+          <Select value={language} onValueChange={setLanguage}>
+            <SelectTrigger id="upload-language" data-testid="upload-language">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={AUTO}>{t('consent.languageAuto')}</SelectItem>
+              {SPOKEN_LANGUAGES.map(([code, name]) => (
+                <SelectItem key={code} value={code}>
+                  {name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <p className="text-xs text-muted-foreground">{t('consent.languageHint')}</p>
+        </div>
+
+        <div className="space-y-1.5">
           <Label htmlFor="consent-note">{t('consent.noteLabel')}</Label>
           <Textarea
             id="consent-note"
@@ -73,9 +122,8 @@ export function ConsentDialog({ file, onCancel, onConfirm }: ConsentDialogProps)
             disabled={!agreed}
             onClick={() => {
               if (!file) return;
-              onConfirm(file, note);
-              setAgreed(false);
-              setNote('');
+              onConfirm(file, note, language === AUTO ? null : language);
+              reset();
             }}
           >
             {t('consent.confirm')}

@@ -11,12 +11,13 @@ import { cn } from '@/lib/utils';
 const STATUS_STYLES: Record<string, string> = {
   completed: 'bg-good-tint text-good',
   processing: 'bg-warn-tint text-warn',
+  analyzing: 'bg-warn-tint text-warn',
   queued: 'bg-warn-tint text-warn',
   failed: 'bg-destructive/10 text-destructive',
 };
 
 export function MeetingsList() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const fileRef = useRef<HTMLInputElement>(null);
@@ -26,8 +27,8 @@ export function MeetingsList() {
   const meetings = useQuery({ queryKey: ['meetings'], queryFn: api.listMeetings });
 
   const upload = useMutation({
-    mutationFn: ({ file, note }: { file: File; note: string }) =>
-      api.uploadMeeting(file, file.name.replace(/\.[^.]+$/, ''), note),
+    mutationFn: ({ file, note, language }: { file: File; note: string; language: string | null }) =>
+      api.uploadMeeting(file, file.name.replace(/\.[^.]+$/, ''), note, language),
     onSuccess: async (meeting) => {
       setUploadError(null);
       await queryClient.invalidateQueries({ queryKey: ['meetings'] });
@@ -75,9 +76,9 @@ export function MeetingsList() {
       <ConsentDialog
         file={pendingFile}
         onCancel={() => setPendingFile(null)}
-        onConfirm={(file, note) => {
+        onConfirm={(file, note, language) => {
           setPendingFile(null);
-          upload.mutate({ file, note });
+          upload.mutate({ file, note, language });
         }}
       />
 
@@ -121,9 +122,13 @@ export function MeetingsList() {
                 {/* Meeting title is content — not routed through i18n. */}
                 <p className="truncate font-medium">{meeting.title}</p>
                 <p className="mt-0.5 font-mono text-xs tabular-nums text-muted-foreground">
-                  {meeting.created_at ? new Date(meeting.created_at).toLocaleDateString() : '—'}
+                  {meeting.created_at
+                    ? new Date(meeting.created_at).toLocaleDateString(i18n.language)
+                    : '—'}
                   {' · '}
-                  {formatTimestamp((meeting.audio_duration_seconds ?? 0) * 1000)}
+                  {meeting.audio_duration_seconds == null
+                    ? '—'
+                    : formatTimestamp(meeting.audio_duration_seconds * 1000)}
                 </p>
               </div>
               <span

@@ -19,7 +19,16 @@ const TONE_STYLES: Record<Stat['tone'], string> = {
   destructive: 'text-destructive',
 };
 
-export function StatCard({ stat, testId }: { stat: Stat; testId?: string }) {
+export function StatCard({
+  stat,
+  label,
+  testId,
+}: {
+  stat: Stat;
+  /** Translated label; the server's English one is the fallback. */
+  label?: string;
+  testId?: string;
+}) {
   const query = new URLSearchParams(stat.link.query).toString();
   const to = query ? `${stat.link.path}?${query}` : stat.link.path;
 
@@ -36,7 +45,7 @@ export function StatCard({ stat, testId }: { stat: Stat; testId?: string }) {
       )}
     >
       <div className="flex items-start justify-between gap-2">
-        <span className="text-sm text-muted-foreground">{stat.label}</span>
+        <span className="text-sm text-muted-foreground">{label ?? stat.label}</span>
         <ArrowUpRight
           aria-hidden="true"
           className="size-4 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100"

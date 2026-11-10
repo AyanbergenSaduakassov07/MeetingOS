@@ -3,9 +3,9 @@ import { SUPPORTED_LANGUAGES } from '@/i18n';
 import { cn } from '@/lib/utils';
 
 /**
- * EN/RU pill. Two languages, both always visible — a segmented control shows
- * the alternative without a click, which a dropdown cannot, and at two options
- * a menu costs more interaction than it saves.
+ * EN/RU/KZ pill. All languages always visible — a segmented control shows
+ * the alternatives without a click, which a dropdown cannot, and at three
+ * options a menu costs more interaction than it saves.
  *
  * Persistence is handled by i18next's language detector (localStorage under
  * `meetingos:lang`), so changing the language here survives a reload without

@@ -79,6 +79,7 @@ class MeetingStatus(enum.StrEnum):
     SCHEDULED = "scheduled"
     RECORDING = "recording"
     PROCESSING = "processing"
+    ANALYZING = "analyzing"  # transcript saved; extraction still running
     COMPLETED = "completed"
     FAILED = "failed"
 
@@ -268,7 +269,7 @@ class Meeting(Base):
 
     recording_path = Column(String, nullable=True)
     audio_duration_seconds = Column(Float, nullable=True)
-    language = Column(String, default="en")
+    language = Column(String, nullable=True)  # None until set or auto-detected
 
     template_id = Column(String, ForeignKey("meeting_templates.id"), nullable=True)
     created_by_id = Column(String, ForeignKey("users.id"), nullable=True)

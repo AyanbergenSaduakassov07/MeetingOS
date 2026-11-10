@@ -65,3 +65,20 @@ def test_selectable_by_env_and_local(monkeypatch):
         assert provider.config.base_url is None and provider.config.api_key_env is None
     finally:
         reset_providers()
+
+
+@pytest.mark.parametrize(
+    ("text", "file_language", "expected"),
+    [
+        ("Бюджет согласован.", "en", "ru"),
+        ("Жиналысты бастаймыз, бәрі келді ме?", "en", "kk"),
+        ("Жиналысты бастаймыз, бәрі келді ме?", "ru", "kk"),
+        ("Хорошо, давайте начнём.", "kk", "kk"),  # no KZ-only letter: trust the file
+        ("Okay, next item.", "ru", "ru"),  # Latin line keeps the file's language
+        ("...", "kk", "kk"),
+    ],
+)
+def test_segment_language_tells_kazakh_from_russian(text, file_language, expected):
+    from backend.transcription.providers.faster_whisper_provider import _segment_language
+
+    assert _segment_language(text, file_language) == expected

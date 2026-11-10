@@ -23,6 +23,9 @@ Goal: make the codebase our own and close the gaps that blocked any real use.
 Goal: know how good the extraction is on real meetings, not on seeded data.
 
 - [x] Messy synthetic recording (`scripts/make_messy_meeting.py`: pauses, sighs, fast speech, overlap, a Russian aside) run end to end through local transcription. Found and fixed: dropped Russian line, timestamps ~8 s early after long pauses, an empty report shown as "no decisions" when extraction had no key
+- [x] First real-recording run (2026-11-10): AMI ES2002a (EN), a Russian government session, a Russian interview, a Kazakh FLEURS clip, all auto-detected, local `large-v3-turbo`. Found and fixed: SQLite "database is locked" when two meetings overlap (write transaction held across LLM calls), long meetings silently cut to the first 120 segments, RU items written in English, verbatim duplicate items, copilot dead when embeddings 402, meetings stuck forever after a restart, 500 on binary bodies to JSON routes
+- [ ] Extraction quality on AMI is still poor against its ground truth (see the audit notes in the v0.3 PR); trivial items outrank the real decisions
+- [ ] Speaker diarization on the default path (every real meeting showed 0 speakers, so commitments have no owner)
 - [ ] Record 5–10 real meetings (with consent), English and Russian, and annotate the decisions, actions and commitments by hand
 - [ ] Add them to `backend/eval` as frozen cases; report precision and recall per item type
 - [ ] Embeddings provider that works on the free path (local `bge-m3` via an OpenAI-compatible server), so cross-language retrieval is measured with real vectors instead of the stub

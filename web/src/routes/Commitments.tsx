@@ -14,7 +14,7 @@ import { cn } from '@/lib/utils';
  * rows that stat counted. If the two ever disagree, the bug is visible.
  */
 export function Commitments() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [params] = useSearchParams();
 
   const filters: Record<string, string> = {};
@@ -112,7 +112,7 @@ export function Commitments() {
                       <div className="flex gap-1">
                         <dt>{t('intelligence.due')}:</dt>
                         <dd className="font-mono tabular-nums">
-                          {new Date(item.due_date).toLocaleDateString()}
+                          {new Date(item.due_date).toLocaleDateString(i18n.language)}
                         </dd>
                       </div>
                     )}

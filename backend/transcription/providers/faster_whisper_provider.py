@@ -27,26 +27,32 @@ INSTALL_HINT = (
 )
 
 _CYRILLIC = re.compile(r"[\u0400-\u04FF]")
+_KAZAKH_ONLY = re.compile(r"[әғқңөұүһіӘҒҚҢӨҰҮҺІ]")  # letters Kazakh Cyrillic has and Russian lacks
 _LETTER = re.compile(r"[^\W\d_]")
 
 
 def _segment_language(text: str, file_language: str | None) -> str | None:
-    """Tag Cyrillic-majority lines in a non-Cyrillic meeting as Russian.
+    """Tag each line's language from its script; meetings here mix EN, RU and KZ.
 
     faster-whisper detects language per window but does not report it per segment.
-    shortcut: script-based, so Kazakh lines also read as "ru"; switch to per-segment detection when KZ matters.
+    shortcut: script-based. A Cyrillic line with no Kazakh-only letter reads as "ru",
+    unless the whole file is Kazakh (short KZ lines often lack those letters);
+    switch to per-segment detection if mixed RU/KZ tagging matters.
     """
     letters = len(_LETTER.findall(text))
-    if file_language in ("ru", "kk") or not letters:
+    if not letters or len(_CYRILLIC.findall(text)) * 2 <= letters:
         return file_language
-    return "ru" if len(_CYRILLIC.findall(text)) * 2 > letters else file_language
+    if _KAZAKH_ONLY.search(text):
+        return "kk"
+    return "kk" if file_language == "kk" else "ru"
 
 
 def default_config() -> TranscriptionConfig:
     """Config for local Whisper, overridable by environment."""
     return TranscriptionConfig(
         name="faster_whisper",
-        model=os.environ.get("FASTER_WHISPER_MODEL", "small"),
+        # small (~0.5 GB) is faster but garbles Kazakh (85% WER vs 38% on FLEURS kk).
+        model=os.environ.get("FASTER_WHISPER_MODEL", "large-v3-turbo"),
         api_key_env=None,
         supports_diarization=False,
         supports_word_timestamps=False,
