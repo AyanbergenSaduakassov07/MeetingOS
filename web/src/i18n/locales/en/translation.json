@@ -81,7 +81,12 @@
     "citations": "From the transcript",
     "suggest1": "What was decided?",
     "suggest2": "Who owns which next steps?",
-    "suggest3": "What risks or open questions came up?"
+    "suggest3": "What risks or open questions came up?",
+    "newChat": "New chat",
+    "emptyTitle": "Ask about this meeting",
+    "copy": "Copy",
+    "copied": "Copied",
+    "hint": "Enter to send · Shift+Enter for a new line"
   },
   "meetings": {
     "title": "Meetings",

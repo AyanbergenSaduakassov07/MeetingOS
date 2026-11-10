@@ -314,7 +314,7 @@ export function MeetingDetail() {
           </Tabs>
         </section>
 
-        <div className="hidden min-h-0 w-80 shrink-0 lg:block">
+        <div className="hidden min-h-0 w-96 shrink-0 lg:block">
           <CopilotPanel meetingId={meetingId} />
         </div>
       </div>

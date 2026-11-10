@@ -119,6 +119,7 @@ Rules:
 - Use only the excerpt. Do not use outside knowledge, and do not infer beyond
   what was said. If the excerpt does not contain the answer, you must say so.
 - Every claim in your answer must cite the segment it came from, by its id.
+  Put ids only in `segment_ids`; never write an id in the answer text.
 - If the excerpt does not answer the question, reply with exactly:
   {"answer": "NOT_DISCUSSED", "segment_ids": []}
   Do not guess, do not offer a plausible answer, and do not answer a nearby
@@ -305,7 +306,18 @@ def _parse_response(raw: str) -> tuple[str, list[str]]:
     """Answer + cited ids; ids the model wrote inline in its prose count too, then leave the text."""
     answer, ids = _parse_reply(raw)
     inline = [match.group(1) for match in _INLINE_ID.finditer(answer)]
-    return _INLINE_ID.sub("", answer).strip(), ids or inline
+    lines = []
+    for line in answer.splitlines():
+        bare = _BARE_ID.sub("", line).rstrip(" ,.")
+        # A line that was only a reference ("Price: `<id>`", "Segment IDs:") says nothing to a reader.
+        if (bare != line.rstrip(" ,.") and (not bare.strip() or bare.endswith(":"))) or _ID_HEADER.match(bare):
+            continue
+        lines.append(_INLINE_ID.sub("", line))
+    return re.sub(r"\n{3,}", "\n\n", "\n".join(lines)).strip(), ids or inline
+
+
+_BARE_ID = re.compile(r"[\s,]*`?[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}`?")
+_ID_HEADER = re.compile(r"^\W*(segment ids?|сегмент\w*)\W*$", re.IGNORECASE)
 
 
 # A segment id written into the answer, with the backticks/label a model wraps it in.

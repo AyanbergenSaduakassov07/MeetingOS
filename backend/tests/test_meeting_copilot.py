@@ -473,3 +473,17 @@ async def test_ids_written_inline_in_prose_still_count_as_citations(db, meeting)
     assert not result.unsupported
     assert [citation.segment_id for citation in result.citations] == [cited]
     assert cited not in result.answer
+
+
+@pytest.mark.asyncio
+async def test_a_trailing_list_of_ids_is_cited_and_removed_from_the_answer(db, meeting):
+    """Seen live on AMI: a correct answer followed by a 'Segment IDs:' section of labelled ids."""
+    cited = segment_id(db, meeting, 3)
+    prose = f"The sponsor money has not cleared.\n\nSegment IDs:\n\nSponsor money: `{cited}`"
+
+    result = await copilot.answer_question(
+        meeting.id, "Sponsor?", db=db, provider=FakeLLM(prose), embedder=NoCreditsEmbedder()
+    )
+
+    assert [citation.segment_id for citation in result.citations] == [cited]
+    assert result.answer == "The sponsor money has not cleared."

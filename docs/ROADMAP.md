@@ -25,6 +25,7 @@ Goal: know how good the extraction is on real meetings, not on seeded data.
 - [x] Messy synthetic recording (`scripts/make_messy_meeting.py`: pauses, sighs, fast speech, overlap, a Russian aside) run end to end through local transcription. Found and fixed: dropped Russian line, timestamps ~8 s early after long pauses, an empty report shown as "no decisions" when extraction had no key
 - [x] First real-recording run (2026-11-10): AMI ES2002a (EN), a Russian government session, a Russian interview, a Kazakh FLEURS clip, all auto-detected, local `large-v3-turbo`. Found and fixed: SQLite "database is locked" when two meetings overlap (write transaction held across LLM calls), long meetings silently cut to the first 120 segments, RU items written in English, verbatim duplicate items, copilot dead when embeddings 402, meetings stuck forever after a restart, 500 on binary bodies to JSON routes
 - [x] Customer walkthrough (2026-11-10, KK/RU/EN interface): summary written in the reader's language from cited items only, minutes copy/download as Markdown, copilot suggested questions, localized extraction warning with raw provider text folded away, dashboard shows "—" instead of 0% when nothing was fact-checked, `<html lang>` follows the UI language
+- [x] Copilot redesigned as a modern answer engine (Perplexity/Claude style): numbered source cards before the answer, each seeking the audio; answers rendered as paragraphs and lists; copy button; New chat; centered empty state with starter questions; rounded auto-growing composer with an inline send button; ids the model leaks into prose are turned into citations and removed from the text
 - [ ] AMI precision: after windowing, every ground-truth item is found (€25 price, international, €12.50 cap, the three role assignments), but setup and icebreaker chatter is extracted too (38 items for ~8 real ones). A "skip logistics" prompt rule is in; re-measure
 - [ ] Copilot on the free model fails about 2 times in 3 on a Kazakh question about a Russian meeting: hidden reasoning loops until the token budget runs out, even at 6000. Needs a stronger model, or translate the question first
 - [ ] Speaker diarization on the default path (every real meeting showed 0 speakers, so commitments have no owner)
@@ -49,6 +50,29 @@ Ranked by how much a customer would notice. None of these are scheduled yet.
 - [ ] Audio player stuck on "loading" until the first play on some recordings
 - [ ] Cross-meeting memory surfaced in the UI ("you promised this three weeks ago")
 - [ ] Positioning: lead with Kazakh/Russian/English code-switching, local transcription, every claim cited with an audio jump, and in-country data for government and enterprise
+
+### Copilot, next steps toward a modern AI chat
+
+- [ ] Stream the answer token by token (today: 20–60 s of dots on the free model, then the whole answer at once); add a Stop button
+- [ ] Inline citation markers `[1]` in the answer text, linked to the source cards
+- [ ] Follow-up questions keep context (today every question is answered alone)
+- [ ] Keep the conversation per meeting across reloads; copy the whole thread as Markdown
+- [ ] Copilot on small screens: hidden below 1024 px today; open it as a bottom sheet or full-screen view
+- [ ] Org-wide copilot page: the backend route `POST /api/copilot/ask` exists, but the rail's Copilot icon goes nowhere
+- [ ] Suggested follow-ups generated from the answer, not only the three fixed starters
+
+### Design audit (2026-11-10)
+
+- [ ] Dead navigation: the rail's Copilot and Library icons link to `/copilot` and `/library`, which have no page, so they silently bounce to the dashboard. Build the pages or hide the icons
+- [ ] Top bar holds only the language toggle: add global search, an upload shortcut and a session/sign-out menu
+- [ ] Meetings list is a bare column on a wide screen: add language badge, duration, item counts, a one-line gist, search and sort
+- [ ] Summary tab: the four count cards should open their tabs; the area below the summary is empty on a wide screen
+- [ ] Meeting header: "Speakers: —" reads as broken; say "not separated" until diarization lands
+- [ ] Extraction warning takes ~80 px on every visit; make it dismissible per meeting
+- [ ] Dashboard quality card: a bare "—" looks like a rendering glitch; label it "not checked yet"
+- [ ] Dashboard "Most active people" empty state should explain why (no speaker separation), not just "no activity"
+- [ ] Top risks mix languages (English items next to Russian ones); show the meeting's language or offer the reader's language
+- [ ] Audio player shows "Loading audio…" with a disabled play button until the whole file is decoded; allow play while the waveform loads
 
 ## v0.4: Teams
 
