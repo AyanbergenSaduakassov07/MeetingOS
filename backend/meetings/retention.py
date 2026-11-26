@@ -50,6 +50,7 @@ from ..database import (
     Topic,
     TranscriptSegment,
 )
+from ..database.models import LiveJoinToken, LiveSession, SegmentTranslation
 
 logger = logging.getLogger(__name__)
 
@@ -153,6 +154,18 @@ def purge_expired(
                         synchronize_session=False
                     )
                 db.query(MeetingDocument).filter_by(meeting_id=meeting.id).delete(synchronize_session=False)
+                # Live captions: translations reference segments, tokens reference sessions.
+                segment_ids = [row.id for row in db.query(TranscriptSegment.id).filter_by(meeting_id=meeting.id)]
+                if segment_ids:
+                    db.query(SegmentTranslation).filter(SegmentTranslation.segment_id.in_(segment_ids)).delete(
+                        synchronize_session=False
+                    )
+                session_ids = [row.id for row in db.query(LiveSession.id).filter_by(meeting_id=meeting.id)]
+                if session_ids:
+                    db.query(LiveJoinToken).filter(LiveJoinToken.session_id.in_(session_ids)).delete(
+                        synchronize_session=False
+                    )
+                db.query(LiveSession).filter_by(meeting_id=meeting.id).delete(synchronize_session=False)
                 for model in (
                     Decision,
                     ActionItem,

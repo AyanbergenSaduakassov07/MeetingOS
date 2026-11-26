@@ -327,7 +327,7 @@ async function ensureOk(response: Response): Promise<void> {
   throw new ApiError(response.status, detail);
 }
 
-async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
+export async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   const response = await fetch(`${BASE}${path}`, {
     credentials: 'same-origin',
     ...init,

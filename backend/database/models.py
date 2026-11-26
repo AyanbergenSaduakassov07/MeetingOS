@@ -909,3 +909,49 @@ class EvalCase(Base):
     updated_at = Column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow)
 
     meeting = relationship("Meeting")
+
+
+# ── Live interpretation ───────────────────────────────────────────────────
+
+
+class LiveSession(Base):
+    """A meeting being captioned as it happens. The transcript itself stays in
+    ``transcript_segments``; this row holds what only exists while it runs."""
+
+    __tablename__ = "live_sessions"
+
+    id = Column(String, primary_key=True, default=_uuid)
+    meeting_id = Column(String, ForeignKey("meetings.id"), nullable=False, index=True)
+    org_id = Column(String, ForeignKey("organizations.id"), nullable=False, index=True)
+    state = Column(String, nullable=False, default="live")  # live | ended | interrupted
+    source_language = Column(String, nullable=True)  # None = auto-detect
+    started_at = Column(DateTime(timezone=True), default=_utcnow)
+    ended_at = Column(DateTime(timezone=True), nullable=True)
+
+
+class LiveJoinToken(Base):
+    """A viewer link for people without an account. Only the hash is stored."""
+
+    __tablename__ = "live_join_tokens"
+
+    id = Column(String, primary_key=True, default=_uuid)
+    session_id = Column(String, ForeignKey("live_sessions.id"), nullable=False, index=True)
+    token_hash = Column(String, nullable=False, unique=True)
+    expires_at = Column(DateTime(timezone=True), nullable=False)
+    revoked_at = Column(DateTime(timezone=True), nullable=True)
+    created_at = Column(DateTime(timezone=True), default=_utcnow)
+
+
+class SegmentTranslation(Base):
+    """One translation of one final segment. The source text is never replaced."""
+
+    __tablename__ = "segment_translations"
+    __table_args__ = (UniqueConstraint("segment_id", "target_lang", "revision"),)
+
+    id = Column(String, primary_key=True, default=_uuid)
+    segment_id = Column(String, ForeignKey("transcript_segments.id"), nullable=False, index=True)
+    target_lang = Column(String, nullable=False)
+    revision = Column(Integer, nullable=False, default=0)
+    text = Column(Text, nullable=False)
+    provider = Column(String, nullable=True)
+    created_at = Column(DateTime(timezone=True), default=_utcnow)

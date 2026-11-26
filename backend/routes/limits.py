@@ -35,6 +35,8 @@ WINDOW_SECONDS = 60.0
 # six hundred is a script.
 ASK_PER_MINUTE = int(os.environ.get("MEETINGOS_ASK_PER_MINUTE", "20"))
 UPLOAD_PER_MINUTE = int(os.environ.get("MEETINGOS_UPLOAD_PER_MINUTE", "5"))
+# Guest viewers load a snapshot on join and on each resync; a person needs a handful.
+LIVE_VIEW_PER_MINUTE = int(os.environ.get("MEETINGOS_LIVE_VIEW_PER_MINUTE", "60"))
 
 _hits: dict[str, deque[float]] = defaultdict(deque)
 
@@ -78,6 +80,11 @@ async def limit_ask(request: Request) -> None:
 async def limit_upload(request: Request) -> None:
     """FastAPI dependency for the upload endpoint."""
     _check(request, "upload", UPLOAD_PER_MINUTE)
+
+
+async def limit_live_view(request: Request) -> None:
+    """FastAPI dependency for unauthenticated live-caption endpoints."""
+    _check(request, "live view", LIVE_VIEW_PER_MINUTE)
 
 
 def reset() -> None:

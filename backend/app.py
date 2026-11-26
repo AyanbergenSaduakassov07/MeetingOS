@@ -200,6 +200,9 @@ async def _run_startup(application: FastAPI) -> None:
     from .meetings.ingestion import resume_interrupted
 
     resume_interrupted()
+    from .live.session import recover_interrupted
+
+    recover_interrupted()
     logger.info("Data directory: %s", config.get_data_dir())
 
     _log_provider_selection()

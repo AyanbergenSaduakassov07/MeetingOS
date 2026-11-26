@@ -32,6 +32,7 @@ def register_routers(app: FastAPI) -> None:
     from .decisions import router as decisions_router
     from .documents import router as documents_router
     from .health import router as health_router
+    from .live import router as live_router
     from .meetings import router as meetings_router
     from .privacy import router as privacy_router
 
@@ -43,3 +44,4 @@ def register_routers(app: FastAPI) -> None:
     app.include_router(documents_router)
     app.include_router(dashboard_router)
     app.include_router(privacy_router)
+    app.include_router(live_router)

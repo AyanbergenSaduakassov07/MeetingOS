@@ -35,6 +35,8 @@ LOOPBACK_HOSTS = frozenset({"127.0.0.1", "localhost", "::1"})
 PROTECTED_PREFIXES = ("/api", "/mcp", "/docs", "/redoc", "/openapi.json")
 # Login has to be reachable without credentials, or nobody can log in.
 PUBLIC_PATHS = frozenset({"/api/session"})
+# Guest caption viewers: these routes accept a join token or the key, and check it themselves.
+SELF_CHECKED_PREFIXES = ("/api/live/view/",)
 
 
 def configured_key() -> str | None:
@@ -67,8 +69,14 @@ def is_authenticated(headers: dict[bytes, bytes], key: str) -> bool:
     return _matches(_bearer(headers), key) or _matches(_cookie(headers), _session_token(key))
 
 
+def has_access(headers: dict[bytes, bytes]) -> bool:
+    """True when no key is configured or the request carries it. For routes the middleware skips."""
+    key = configured_key()
+    return key is None or is_authenticated(headers, key)
+
+
 def _is_protected(path: str) -> bool:
-    if path in PUBLIC_PATHS:
+    if path in PUBLIC_PATHS or path.startswith(SELF_CHECKED_PREFIXES):
         return False
     return any(path == p or path.startswith(p + "/") for p in PROTECTED_PREFIXES)
 

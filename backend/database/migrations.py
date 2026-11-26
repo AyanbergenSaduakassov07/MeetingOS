@@ -47,6 +47,7 @@ def run_migrations(engine) -> None:
     _migrate_evidence(engine, inspector, tables)
     _migrate_documents(engine, inspector, tables)
     _migrate_provider_calls(engine, inspector, tables)
+    _migrate_live(engine, inspector)
 
 
 # -- helpers ---------------------------------------------------------------
@@ -312,3 +313,14 @@ def _migrate_provider_calls(engine, inspector, tables: set[str]) -> None:
     if "provider_calls" not in inspector.get_table_names():
         Base.metadata.create_all(engine, tables=[ProviderCall.__table__])
         logger.info("Created provider_calls table")
+
+
+def _migrate_live(engine, inspector) -> None:
+    """Add the live-caption tables (v0.4)."""
+    from .models import LiveJoinToken, LiveSession, SegmentTranslation
+
+    existing = set(inspector.get_table_names())
+    missing = [m.__table__ for m in (LiveSession, LiveJoinToken, SegmentTranslation) if m.__tablename__ not in existing]
+    if missing:
+        Base.metadata.create_all(engine, tables=missing)
+        logger.info("Created live tables: %s", ", ".join(t.name for t in missing))

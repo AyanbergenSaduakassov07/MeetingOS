@@ -26,7 +26,8 @@ from pathlib import Path
 from sqlalchemy.orm import Session
 
 from .. import config
-from ..database import Meeting, MeetingStatus, Speaker, TranscriptSegment
+from ..database import Meeting, MeetingSource, MeetingStatus, Speaker, TranscriptSegment
+from ..database.models import SegmentTranslation
 from ..transcription import TranscriptionProvider, get_transcription_provider
 from ..transcription.base import DiarizationResult, TranscriptionResult, merge_diarization
 
@@ -85,7 +86,9 @@ def resume_interrupted() -> int:
         stuck = [
             meeting_id
             for (meeting_id,) in db.query(Meeting.id).filter(
-                Meeting.status.in_([MeetingStatus.PROCESSING.value, MeetingStatus.ANALYZING.value])
+                Meeting.status.in_([MeetingStatus.PROCESSING.value, MeetingStatus.ANALYZING.value]),
+                # Live meetings have no batch transcript to redo; live.session recovers them.
+                Meeting.source != MeetingSource.LIVE.value,
             )
         ]
     finally:
@@ -254,6 +257,10 @@ def _write_transcript(db: Session, meeting: Meeting, result: TranscriptionResult
     so this clears prior rows rather than appending to them. Segments go
     before speakers because segments reference them.
     """
+    segment_ids = db.query(TranscriptSegment.id).filter_by(meeting_id=meeting.id)
+    db.query(SegmentTranslation).filter(SegmentTranslation.segment_id.in_(segment_ids.scalar_subquery())).delete(
+        synchronize_session=False
+    )
     db.query(TranscriptSegment).filter_by(meeting_id=meeting.id).delete(synchronize_session=False)
     db.query(Speaker).filter_by(meeting_id=meeting.id).delete(synchronize_session=False)
     db.flush()

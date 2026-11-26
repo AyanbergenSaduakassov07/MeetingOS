@@ -1,0 +1,211 @@
+[
+ {
+  "code": "kk",
+  "name": "Kazakh",
+  "native": "Қазақша",
+  "rtl": false,
+  "speech": [
+   "google",
+   "azure",
+   "whisper"
+  ],
+  "verified": "vendor_listed"
+ },
+ {
+  "code": "ru",
+  "name": "Russian",
+  "native": "Русский",
+  "rtl": false,
+  "speech": [
+   "google",
+   "azure",
+   "whisper"
+  ],
+  "verified": "vendor_listed"
+ },
+ {
+  "code": "en",
+  "name": "English",
+  "native": "English",
+  "rtl": false,
+  "speech": [
+   "google",
+   "azure",
+   "whisper"
+  ],
+  "verified": "vendor_listed"
+ },
+ {
+  "code": "uz",
+  "name": "Uzbek",
+  "native": "Oʻzbekcha",
+  "rtl": false,
+  "speech": [
+   "azure",
+   "whisper"
+  ],
+  "verified": "vendor_listed"
+ },
+ {
+  "code": "ky",
+  "name": "Kyrgyz",
+  "native": "Кыргызча",
+  "rtl": false,
+  "speech": [
+   "google"
+  ],
+  "verified": "vendor_listed"
+ },
+ {
+  "code": "tg",
+  "name": "Tajik",
+  "native": "Тоҷикӣ",
+  "rtl": false,
+  "speech": [
+   "google",
+   "whisper"
+  ],
+  "verified": "vendor_listed"
+ },
+ {
+  "code": "tk",
+  "name": "Turkmen",
+  "native": "Türkmençe",
+  "rtl": false,
+  "speech": [
+   "whisper"
+  ],
+  "verified": "vendor_listed"
+ },
+ {
+  "code": "mn",
+  "name": "Mongolian",
+  "native": "Монгол",
+  "rtl": false,
+  "speech": [
+   "google",
+   "azure",
+   "whisper"
+  ],
+  "verified": "vendor_listed"
+ },
+ {
+  "code": "fa",
+  "name": "Persian",
+  "native": "فارسی",
+  "rtl": true,
+  "speech": [
+   "azure",
+   "whisper"
+  ],
+  "verified": "vendor_listed"
+ },
+ {
+  "code": "zh",
+  "name": "Chinese",
+  "native": "中文",
+  "rtl": false,
+  "speech": [
+   "google",
+   "azure",
+   "whisper"
+  ],
+  "verified": "vendor_listed"
+ },
+ {
+  "code": "de",
+  "name": "German",
+  "native": "Deutsch",
+  "rtl": false,
+  "speech": [
+   "google",
+   "azure",
+   "whisper"
+  ],
+  "verified": "vendor_listed"
+ },
+ {
+  "code": "tr",
+  "name": "Turkish",
+  "native": "Türkçe",
+  "rtl": false,
+  "speech": [
+   "google",
+   "azure",
+   "whisper"
+  ],
+  "verified": "vendor_listed"
+ },
+ {
+  "code": "ja",
+  "name": "Japanese",
+  "native": "日本語",
+  "rtl": false,
+  "speech": [
+   "google",
+   "azure",
+   "whisper"
+  ],
+  "verified": "vendor_listed"
+ },
+ {
+  "code": "ko",
+  "name": "Korean",
+  "native": "한국어",
+  "rtl": false,
+  "speech": [
+   "google",
+   "azure",
+   "whisper"
+  ],
+  "verified": "vendor_listed"
+ },
+ {
+  "code": "hi",
+  "name": "Hindi",
+  "native": "हिन्दी",
+  "rtl": false,
+  "speech": [
+   "google",
+   "azure",
+   "whisper"
+  ],
+  "verified": "vendor_listed"
+ },
+ {
+  "code": "ar",
+  "name": "Arabic",
+  "native": "العربية",
+  "rtl": true,
+  "speech": [
+   "google",
+   "azure",
+   "whisper"
+  ],
+  "verified": "vendor_listed"
+ },
+ {
+  "code": "fr",
+  "name": "French",
+  "native": "Français",
+  "rtl": false,
+  "speech": [
+   "google",
+   "azure",
+   "whisper"
+  ],
+  "verified": "vendor_listed"
+ },
+ {
+  "code": "es",
+  "name": "Spanish",
+  "native": "Español",
+  "rtl": false,
+  "speech": [
+   "google",
+   "azure",
+   "whisper"
+  ],
+  "verified": "vendor_listed"
+ }
+]

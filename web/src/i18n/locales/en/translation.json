@@ -28,7 +28,8 @@
     "current": "(current)",
     "copilot": "Copilot",
     "library": "Library",
-    "dashboard": "Dashboard"
+    "dashboard": "Dashboard",
+    "live": "Live captions"
   },
   "tabs": {
     "summary": "Summary",
@@ -266,5 +267,45 @@
     "nothingIndexed": "Nothing is searchable yet. Meetings and documents become searchable once the embedding model has indexed them; ask about one meeting from its page in the meantime.",
     "notFound": "None of your meetings or documents cover this.",
     "untitled": "Untitled"
+  },
+  "live": {
+    "title": "Live captions",
+    "intro": "Caption a meeting as it happens. Guests open a link and read along in their own language.",
+    "meetingTitle": "Meeting title",
+    "spokenLanguage": "Spoken language",
+    "spokenLanguageHint": "Leave on Original to detect it automatically.",
+    "audioSource": "Audio source",
+    "microphone": "Microphone",
+    "browserTab": "Browser tab",
+    "consent": "Everyone in this meeting agreed to be recorded, transcribed and translated.",
+    "start": "Start captioning",
+    "end": "End session",
+    "ending": "Ending…",
+    "original": "Original (no translation)",
+    "captionLanguage": "Captions in",
+    "waiting": "Waiting for speech…",
+    "translating": "Translating…",
+    "translationFailed": "Translation unavailable for this line",
+    "shareTitle": "Viewer link",
+    "shareHint": "Anyone with this link can read the captions until the session ends. Rotate it to cut off old links.",
+    "copy": "Copy",
+    "copied": "Link copied",
+    "rotate": "New link",
+    "linkRotated": "Old links revoked; new link ready",
+    "viewers_one": "{{count}} viewer",
+    "viewers_other": "{{count}} viewers",
+    "engine": "Speech: {{asr}} · Translation: {{translator}}",
+    "captureFailed": "Could not capture audio: {{error}}",
+    "linkInvalid": "This link is invalid, expired or revoked.",
+    "endedTitle": "Session ended",
+    "endedBody": "The transcript is saved. Decisions and action items are being extracted now.",
+    "openMeeting": "Open meeting",
+    "startAnother": "Start another",
+    "state": {
+      "connecting": "Connecting",
+      "live": "Live",
+      "ended": "Ended",
+      "error": "Unavailable"
+    }
   }
 }

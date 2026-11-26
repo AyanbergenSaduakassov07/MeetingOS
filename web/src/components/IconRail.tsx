@@ -3,6 +3,7 @@ import {
   LayoutDashboard,
   ListChecks,
   type LucideIcon,
+  Radio,
   Settings,
   Sparkles,
 } from 'lucide-react';
@@ -21,6 +22,7 @@ import { cn } from '@/lib/utils';
 const RAIL_ITEMS: Array<{ to: string; icon: LucideIcon; labelKey: string; end?: boolean }> = [
   { to: '/dashboard', icon: LayoutDashboard, labelKey: 'nav.dashboard' },
   { to: '/meetings', icon: ListChecks, labelKey: 'nav.meetings' },
+  { to: '/live', icon: Radio, labelKey: 'nav.live' },
   { to: '/copilot', icon: Sparkles, labelKey: 'nav.copilot' },
   { to: '/library', icon: BookMarked, labelKey: 'nav.library' },
   { to: '/settings/privacy', icon: Settings, labelKey: 'nav.settings' },
