@@ -27,7 +27,19 @@
     "library": "Library",
     "dashboard": "Dashboard",
     "live": "Live captions",
-    "commitments": "Commitments"
+    "commitments": "Commitments",
+    "new": "New",
+    "newMeeting": "Upload recording",
+    "newLive": "Start live captions",
+    "newDocument": "Add document",
+    "search": "Search",
+    "hideSidebar": "Hide sidebar",
+    "showSidebar": "Show sidebar",
+    "decisions": "Decisions",
+    "risks": "Risks",
+    "groupRecord": "Record",
+    "groupTools": "Tools",
+    "moreLanguages": "All languages…"
   },
   "tabs": {
     "summary": "Summary",
@@ -336,5 +348,13 @@
     "allLanguages": "All languages",
     "noMatch": "No language matches “{{query}}”.",
     "current": "Current"
+  },
+  "palette": {
+    "title": "Go to",
+    "placeholder": "Search pages and meetings…",
+    "pages": "Pages",
+    "meetings": "Meetings",
+    "languages": "Interface language",
+    "empty": "No results"
   }
 }

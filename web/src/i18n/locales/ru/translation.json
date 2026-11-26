@@ -27,7 +27,19 @@
     "library": "Библиотека",
     "dashboard": "Панель",
     "live": "Живые субтитры",
-    "commitments": "Обязательства"
+    "commitments": "Обязательства",
+    "new": "Создать",
+    "newMeeting": "Загрузить запись",
+    "newLive": "Начать субтитры",
+    "newDocument": "Добавить документ",
+    "search": "Поиск",
+    "hideSidebar": "Скрыть панель",
+    "showSidebar": "Показать панель",
+    "decisions": "Решения",
+    "risks": "Риски",
+    "groupRecord": "Протокол",
+    "groupTools": "Инструменты",
+    "moreLanguages": "Все языки…"
   },
   "tabs": {
     "summary": "Обзор",
@@ -338,5 +350,13 @@
     "allLanguages": "Все языки",
     "noMatch": "Язык «{{query}}» не найден.",
     "current": "Текущий"
+  },
+  "palette": {
+    "title": "Перейти",
+    "placeholder": "Поиск страниц и встреч…",
+    "pages": "Страницы",
+    "meetings": "Встречи",
+    "languages": "Язык интерфейса",
+    "empty": "Ничего не найдено"
   }
 }

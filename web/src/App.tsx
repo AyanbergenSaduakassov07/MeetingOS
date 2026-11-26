@@ -1,12 +1,11 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { LogOut } from 'lucide-react';
+import { ChevronsRight } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { AuthGate } from './components/AuthGate';
-import { IconRail } from './components/IconRail';
-import { LanguageToggle } from './components/LanguageToggle';
+import { CommandPalette } from './components/CommandPalette';
+import { Sidebar } from './components/Sidebar';
 import { Toaster } from './components/ui/toaster';
-import { api } from './lib/api';
 import { Commitments } from './routes/Commitments';
 import { Dashboard } from './routes/Dashboard';
 import { Library } from './routes/Library';
@@ -29,12 +28,57 @@ export default function App() {
   );
 }
 
+const SIDEBAR_KEY = 'meetingos:sidebar';
+
+function readSidebarHidden(): boolean {
+  try {
+    const stored = localStorage.getItem(SIDEBAR_KEY);
+    if (stored) return stored === 'hidden';
+  } catch {
+    // Storage blocked: fall through to the width default.
+  }
+  // No saved choice: phones start with the sidebar hidden so content gets the width.
+  return window.matchMedia('(max-width: 767px)').matches;
+}
+
+/** Sidebar visibility, remembered per browser; ⌘\ toggles it, ⌘K opens the palette. */
+function useShellShortcuts() {
+  const [sidebarHidden, setSidebarHidden] = useState(readSidebarHidden);
+  const [paletteOpen, setPaletteOpen] = useState(false);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(SIDEBAR_KEY, sidebarHidden ? 'hidden' : 'shown');
+    } catch {
+      // Storage blocked: the choice just will not survive a reload.
+    }
+  }, [sidebarHidden]);
+
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (!(event.metaKey || event.ctrlKey)) return;
+      if (event.key.toLowerCase() === 'k') {
+        event.preventDefault();
+        setPaletteOpen((open) => !open);
+      } else if (event.key === '\\') {
+        event.preventDefault();
+        setSidebarHidden((hidden) => !hidden);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
+  return { sidebarHidden, setSidebarHidden, paletteOpen, setPaletteOpen };
+}
+
 function Shell() {
   const { t } = useTranslation();
+  const { sidebarHidden, setSidebarHidden, paletteOpen, setPaletteOpen } = useShellShortcuts();
 
   return (
     <AuthGate>
-      <div className="h-dvh overflow-hidden bg-background text-foreground">
+      <div className="flex h-dvh overflow-hidden bg-background text-foreground">
         <a
           href="#main"
           className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-card focus:px-4 focus:py-2 focus:ring-2 focus:ring-ring"
@@ -42,72 +86,48 @@ function Shell() {
           {t('nav.skipToContent')}
         </a>
 
-        <IconRail />
+        {sidebarHidden ? (
+          <button
+            type="button"
+            onClick={() => setSidebarHidden(false)}
+            aria-label={t('nav.showSidebar')}
+            title={t('nav.showSidebar')}
+            data-testid="show-sidebar"
+            className="fixed left-3 top-3 z-40 flex size-8 items-center justify-center rounded-md border border-border bg-card text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <ChevronsRight aria-hidden="true" className="size-4" />
+          </button>
+        ) : (
+          <Sidebar onHide={() => setSidebarHidden(true)} onSearch={() => setPaletteOpen(true)} />
+        )}
 
-        {/* The shell owns the viewport height: a header of its own height plus a
-          main that takes the rest. Pages inside use h-full, never h-dvh, or
-          they would be one header taller than the screen. */}
-        <div className="flex h-dvh flex-col pl-20">
-          <div className="flex shrink-0 items-center justify-end gap-2 px-6 py-3">
-            <LanguageToggle />
-            <SignOutButton />
-          </div>
-          <main id="main" tabIndex={-1} className="min-h-0 flex-1 overflow-y-auto">
-            <Routes>
-              <Route path="/" element={<Navigate to="/dashboard" replace />} />
-              <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/commitments" element={<Commitments />} />
-              <Route path="/people/:personId/commitments" element={<Commitments />} />
-              <Route path="/decisions" element={<Register kind="decisions" />} />
-              <Route path="/risks" element={<Register kind="risks" />} />
-              <Route path="/quality" element={<Register kind="quality" />} />
-              <Route path="/settings" element={<SettingsLayout />}>
-                <Route index element={<Navigate to="language" replace />} />
-                <Route path="language" element={<LanguageSettings />} />
-                <Route path="privacy" element={<PrivacySettings />} />
-              </Route>
-              <Route path="/copilot" element={<OrgCopilot />} />
-              <Route path="/library" element={<Library />} />
-              <Route path="/live" element={<LiveHost />} />
-              <Route path="/meetings" element={<MeetingsList />} />
-              <Route path="/meetings/:meetingId" element={<MeetingDetail />} />
-              <Route path="*" element={<Navigate to="/dashboard" replace />} />
-            </Routes>
-          </main>
-        </div>
+        {/* The shell owns the viewport height; pages use h-full, never h-dvh. */}
+        <main id="main" tabIndex={-1} className="min-h-0 min-w-0 flex-1 overflow-y-auto">
+          <Routes>
+            <Route path="/" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/commitments" element={<Commitments />} />
+            <Route path="/people/:personId/commitments" element={<Commitments />} />
+            <Route path="/decisions" element={<Register kind="decisions" />} />
+            <Route path="/risks" element={<Register kind="risks" />} />
+            <Route path="/quality" element={<Register kind="quality" />} />
+            <Route path="/settings" element={<SettingsLayout />}>
+              <Route index element={<Navigate to="language" replace />} />
+              <Route path="language" element={<LanguageSettings />} />
+              <Route path="privacy" element={<PrivacySettings />} />
+            </Route>
+            <Route path="/copilot" element={<OrgCopilot />} />
+            <Route path="/library" element={<Library />} />
+            <Route path="/live" element={<LiveHost />} />
+            <Route path="/meetings" element={<MeetingsList />} />
+            <Route path="/meetings/:meetingId" element={<MeetingDetail />} />
+            <Route path="*" element={<Navigate to="/dashboard" replace />} />
+          </Routes>
+        </main>
 
+        <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
         <Toaster />
       </div>
     </AuthGate>
-  );
-}
-
-function SignOutButton() {
-  const { t } = useTranslation();
-  const queryClient = useQueryClient();
-  const session = useQuery({ queryKey: ['session'], queryFn: api.getSession });
-  const logout = useMutation({
-    mutationFn: api.logout,
-    // Refetch the session first so the gate swaps to the login screen, then
-    // drop cached meeting data so it is not sitting in memory behind it.
-    onSuccess: async () => {
-      await queryClient.resetQueries({ queryKey: ['session'] });
-      queryClient.removeQueries({ predicate: (query) => query.queryKey[0] !== 'session' });
-    },
-  });
-
-  // No key configured means there is nothing to sign out of.
-  if (!session.data?.auth_required) return null;
-  return (
-    <button
-      type="button"
-      title={t('auth.signOut')}
-      aria-label={t('auth.signOut')}
-      disabled={logout.isPending}
-      onClick={() => logout.mutate()}
-      className="flex size-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-    >
-      <LogOut aria-hidden="true" className="size-4" />
-    </button>
   );
 }

@@ -201,7 +201,7 @@ def test_language_toggle_switches_chrome_only(page) -> None:
     en_title = title.inner_text().strip()
     en_quote = quote.inner_text().strip()
 
-    page.get_by_role("button", name="RU", exact=True).click()
+    switch_language(page, "Русский")
     page.wait_for_function(
         "(before) => document.querySelector('[data-testid=\"tab-decisions\"]').innerText.trim() !== before",
         arg=en_tab,
@@ -228,7 +228,13 @@ def test_language_toggle_switches_chrome_only(page) -> None:
     expect(page.locator('[data-testid="tab-decisions"]')).to_have_text("Решения")
     print("  ✓ language persisted across reload")
 
-    page.get_by_role("button", name="EN", exact=True).click()
+    switch_language(page, "English")
+
+
+def switch_language(page, name: str) -> None:
+    """Switch interface language in place via the sidebar language menu."""
+    page.get_by_test_id("language-menu").click()
+    page.get_by_role("menuitem", name=name).click()
 
 
 def capture_screenshots(page) -> None:
@@ -239,7 +245,7 @@ def capture_screenshots(page) -> None:
     for language in ("en", "ru"):
         page.goto(f"{BASE}/meetings/{meeting_id}")
         page.wait_for_load_state("networkidle")
-        page.get_by_role("button", name=language.upper(), exact=True).click()
+        switch_language(page, {"en": "English", "ru": "Русский"}[language])
         page.locator('[data-testid="tab-decisions"]').click()
         expect(
             page.locator('[data-testid="player-bar"][data-ready="true"]')

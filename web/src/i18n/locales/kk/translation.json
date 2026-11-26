@@ -27,7 +27,19 @@
     "library": "Кітапхана",
     "dashboard": "Басқару тақтасы",
     "live": "Тікелей субтитрлер",
-    "commitments": "Міндеттемелер"
+    "commitments": "Міндеттемелер",
+    "new": "Жасау",
+    "newMeeting": "Жазбаны жүктеу",
+    "newLive": "Субтитрді бастау",
+    "newDocument": "Құжат қосу",
+    "search": "Іздеу",
+    "hideSidebar": "Панельді жасыру",
+    "showSidebar": "Панельді көрсету",
+    "decisions": "Шешімдер",
+    "risks": "Тәуекелдер",
+    "groupRecord": "Хаттама",
+    "groupTools": "Құралдар",
+    "moreLanguages": "Барлық тілдер…"
   },
   "tabs": {
     "summary": "Қорытынды",
@@ -336,5 +348,13 @@
     "allLanguages": "Барлық тілдер",
     "noMatch": "«{{query}}» тілі табылмады.",
     "current": "Ағымдағы"
+  },
+  "palette": {
+    "title": "Өту",
+    "placeholder": "Беттер мен кездесулерді іздеу…",
+    "pages": "Беттер",
+    "meetings": "Кездесулер",
+    "languages": "Интерфейс тілі",
+    "empty": "Ештеңе табылмады"
   }
 }
