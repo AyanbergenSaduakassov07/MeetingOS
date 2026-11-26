@@ -4,6 +4,22 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { api } from '@/lib/api';
 
+// shortcut: mirrors backend SPOKEN_LANGUAGES (routes/meetings.py); other choices get English minutes until the backend allowlist widens
+const MINUTES_LANGUAGES = new Set([
+  'en',
+  'ru',
+  'kk',
+  'uz',
+  'ky',
+  'tr',
+  'uk',
+  'de',
+  'fr',
+  'es',
+  'zh',
+  'ar',
+]);
+
 /**
  * Executive summary + minutes export. The summary is written only from the
  * extracted, cited items, so it cannot add a decision nobody made.
@@ -11,7 +27,8 @@ import { api } from '@/lib/api';
 export function SummaryPanel({ meetingId, title }: { meetingId: string; title: string }) {
   const { t, i18n } = useTranslation();
   const [copied, setCopied] = useState(false);
-  const language = i18n.language.slice(0, 2);
+  const code = i18n.language.split('-')[0];
+  const language = MINUTES_LANGUAGES.has(code) ? code : 'en';
 
   const summary = useMutation({
     mutationFn: () => api.getMinutes(meetingId, true, language),

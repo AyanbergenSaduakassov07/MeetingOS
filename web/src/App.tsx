@@ -16,6 +16,8 @@ import { MeetingDetail } from './routes/MeetingDetail';
 import { MeetingsList } from './routes/MeetingsList';
 import { OrgCopilot } from './routes/OrgCopilot';
 import { PrivacySettings } from './routes/PrivacySettings';
+import { Register } from './routes/Register';
+import { LanguageSettings, SettingsLayout } from './routes/Settings';
 
 export default function App() {
   return (
@@ -55,7 +57,15 @@ function Shell() {
               <Route path="/" element={<Navigate to="/dashboard" replace />} />
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/commitments" element={<Commitments />} />
-              <Route path="/settings/privacy" element={<PrivacySettings />} />
+              <Route path="/people/:personId/commitments" element={<Commitments />} />
+              <Route path="/decisions" element={<Register kind="decisions" />} />
+              <Route path="/risks" element={<Register kind="risks" />} />
+              <Route path="/quality" element={<Register kind="quality" />} />
+              <Route path="/settings" element={<SettingsLayout />}>
+                <Route index element={<Navigate to="language" replace />} />
+                <Route path="language" element={<LanguageSettings />} />
+                <Route path="privacy" element={<PrivacySettings />} />
+              </Route>
               <Route path="/copilot" element={<OrgCopilot />} />
               <Route path="/library" element={<Library />} />
               <Route path="/live" element={<LiveHost />} />

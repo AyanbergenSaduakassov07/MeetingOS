@@ -12,7 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ApiError, api, type ExtractedItem } from '@/lib/api';
 import { formatTimestamp } from '@/lib/playback';
 
-const TABS = ['summary', 'decisions', 'actions', 'risks', 'transcript'] as const;
+const TABS = ['summary', 'decisions', 'actions', 'commitments', 'risks', 'transcript'] as const;
 
 const isNotFound = (error: unknown) => error instanceof ApiError && error.status === 404;
 
@@ -287,6 +287,9 @@ export function MeetingDetail() {
               </TabsContent>
               <TabsContent value="actions">
                 <ItemList items={intel?.action_items ?? []} kind="action" />
+              </TabsContent>
+              <TabsContent value="commitments">
+                <ItemList items={intel?.commitments ?? []} kind="commitment" />
               </TabsContent>
               <TabsContent value="risks">
                 <ItemList items={intel?.risks ?? []} kind="risk" />

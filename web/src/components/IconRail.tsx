@@ -1,5 +1,6 @@
 import {
   BookMarked,
+  ClipboardCheck,
   LayoutDashboard,
   ListChecks,
   type LucideIcon,
@@ -22,10 +23,11 @@ import { cn } from '@/lib/utils';
 const RAIL_ITEMS: Array<{ to: string; icon: LucideIcon; labelKey: string; end?: boolean }> = [
   { to: '/dashboard', icon: LayoutDashboard, labelKey: 'nav.dashboard' },
   { to: '/meetings', icon: ListChecks, labelKey: 'nav.meetings' },
+  { to: '/commitments', icon: ClipboardCheck, labelKey: 'nav.commitments' },
   { to: '/live', icon: Radio, labelKey: 'nav.live' },
   { to: '/copilot', icon: Sparkles, labelKey: 'nav.copilot' },
   { to: '/library', icon: BookMarked, labelKey: 'nav.library' },
-  { to: '/settings/privacy', icon: Settings, labelKey: 'nav.settings' },
+  { to: '/settings', icon: Settings, labelKey: 'nav.settings' },
 ];
 
 export function IconRail() {
@@ -37,7 +39,7 @@ export function IconRail() {
       className="fixed left-0 top-0 z-40 flex h-full w-20 flex-col items-center gap-6 border-r border-border bg-card py-6"
     >
       <NavLink
-        to="/meetings"
+        to="/dashboard"
         aria-label={t('nav.brand')}
         title={t('nav.brand')}
         className="size-12 shrink-0 rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"

@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { AlertTriangle, Loader2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { CitationTime } from '@/components/CitationTime';
 import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
@@ -12,10 +12,12 @@ import { cn } from '@/lib/utils';
  * Filters come from the query string, which is what makes the dashboard link
  * reproduce its own number: `/commitments?overdue=true` returns exactly the
  * rows that stat counted. If the two ever disagree, the bug is visible.
+ * Under `/people/:personId/commitments` it shows that person's obligations.
  */
 export function Commitments() {
   const { t, i18n } = useTranslation();
   const [params] = useSearchParams();
+  const { personId } = useParams();
 
   const filters: Record<string, string> = {};
   for (const key of ['overdue', 'owner', 'status', 'kind'] as const) {
@@ -24,18 +26,30 @@ export function Commitments() {
   }
 
   const commitments = useQuery({
-    queryKey: ['commitments', filters],
-    queryFn: () => api.listCommitments(filters),
+    queryKey: ['commitments', personId ?? null, filters],
+    queryFn: async () => {
+      if (!personId) return { ...(await api.listCommitments(filters)), personName: null };
+      const person = await api.getPersonCommitments(personId);
+      return {
+        items: person.items,
+        total: person.total,
+        overdue_count: person.overdue,
+        personName: person.person_name ?? person.person_email ?? personId,
+      };
+    },
   });
 
   const overdueOnly = filters.overdue === 'true';
+  const title = personId
+    ? t('commitments.personTitle', { name: commitments.data?.personName ?? '…' })
+    : overdueOnly
+      ? t('commitments.overdueTitle')
+      : t('commitments.title');
 
   return (
     <div className="mx-auto max-w-4xl px-6 py-8">
       <header className="flex flex-wrap items-baseline justify-between gap-3">
-        <h1 className="font-display text-3xl font-black tracking-tight">
-          {overdueOnly ? t('commitments.overdueTitle') : t('commitments.title')}
-        </h1>
+        <h1 className="font-display text-3xl font-black tracking-tight">{title}</h1>
         <Link
           to="/dashboard"
           className="text-sm text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"

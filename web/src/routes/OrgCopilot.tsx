@@ -4,11 +4,9 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { AssistantRow, RichText, Thinking } from '@/components/CopilotPanel';
+import { languageName } from '@/i18n';
 import { api, type OrgAskResponse } from '@/lib/api';
 import { formatTimestamp } from '@/lib/playback';
-
-// The backend wants a plain language name, not a code.
-const LANGUAGE_NAMES: Record<string, string> = { en: 'English', ru: 'Russian', kk: 'Kazakh' };
 
 interface Turn {
   id: string;
@@ -28,7 +26,8 @@ export function OrgCopilot() {
 
   const ask = useMutation({
     mutationFn: ({ question }: { id: string; question: string }) =>
-      api.askOrg(question, LANGUAGE_NAMES[i18n.language.slice(0, 2)] ?? 'English'),
+      // The backend wants a plain English language name, not a code.
+      api.askOrg(question, languageName(i18n.language, 'en')),
     onSuccess: (response, { id }) => patchTurn(id, { response }),
     onError: (error, { id }) =>
       patchTurn(id, { error: error instanceof Error ? error.message : t('copilot.error') }),

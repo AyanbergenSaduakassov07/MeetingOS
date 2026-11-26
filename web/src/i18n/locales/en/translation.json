@@ -29,14 +29,16 @@
     "copilot": "Copilot",
     "library": "Library",
     "dashboard": "Dashboard",
-    "live": "Live captions"
+    "live": "Live captions",
+    "commitments": "Commitments"
   },
   "tabs": {
     "summary": "Summary",
     "decisions": "Decisions",
     "actions": "Actions",
     "risks": "Risks",
-    "transcript": "Transcript"
+    "transcript": "Transcript",
+    "commitments": "Commitments"
   },
   "status": {
     "verified": "Verified",
@@ -177,7 +179,8 @@
     "loadFailed": "Could not load commitments.",
     "overdueBy": "{{days}} days overdue",
     "kind_commitment": "Promise",
-    "kind_action_item": "Task"
+    "kind_action_item": "Task",
+    "personTitle": "Commitments: {{name}}"
   },
   "privacy": {
     "title": "Privacy & data governance",
@@ -312,5 +315,29 @@
     "present": "Presenter view",
     "fullscreen": "Full screen",
     "detectLanguage": "Detect automatically"
+  },
+  "register": {
+    "decisions": "Decisions",
+    "risks": "Open risks",
+    "quality": "Extraction quality",
+    "count": "{{count}} item(s)",
+    "period": "Meetings from the last {{days}} days",
+    "allTime": "All meetings",
+    "empty": "Nothing matches these filters.",
+    "loadFailed": "Could not load the register.",
+    "partial": "{{count}} meeting(s) could not be loaded, so this list may be incomplete.",
+    "all": "All"
+  },
+  "settings": {
+    "title": "Settings",
+    "language": "Language",
+    "privacy": "Privacy",
+    "languageHelp": "Choose the language for this workspace. Dates and numbers follow it, and summaries, minutes and copilot answers are written in it where the service supports it.",
+    "interfaceNote": "Interface text is translated into English, Russian and Kazakh. With any other language, interface text stays in English.",
+    "search": "Search languages",
+    "translated": "Interface translated",
+    "allLanguages": "All languages",
+    "noMatch": "No language matches “{{query}}”.",
+    "current": "Current"
   }
 }

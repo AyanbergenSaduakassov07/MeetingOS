@@ -163,6 +163,18 @@ export interface CommitmentList {
   overdue_count: number;
 }
 
+export interface PersonCommitments {
+  person_id: string;
+  person_name: string | null;
+  person_email: string | null;
+  total: number;
+  open: number;
+  completed: number;
+  overdue: number;
+  completion_rate: number | null;
+  items: CommitmentItem[];
+}
+
 export interface ProviderInfo {
   name: string;
   role: string;
@@ -415,6 +427,8 @@ export const api = {
     sendJson<RedactionInfo>('PUT', '/api/privacy/redaction', { enabled, rules }),
   listCommitments: (params: Record<string, string> = {}) =>
     get<CommitmentList>(`/api/commitments?${new URLSearchParams(params)}`),
+  getPersonCommitments: (personId: string) =>
+    get<PersonCommitments>(`/api/people/${encodeURIComponent(personId)}/commitments`),
   // Deterministic minutes; `summarise` adds an LLM paragraph written only from them.
   getMinutes: (id: string, summarise: boolean, language: string) =>
     request<Minutes>(
