@@ -273,7 +273,7 @@
     "intro": "Caption a meeting as it happens. Guests open a link and read along in their own language.",
     "meetingTitle": "Meeting title",
     "spokenLanguage": "Spoken language",
-    "spokenLanguageHint": "Leave on Original to detect it automatically.",
+    "spokenLanguageHint": "Choosing the language makes captions more accurate.",
     "audioSource": "Audio source",
     "microphone": "Microphone",
     "browserTab": "Browser tab",
@@ -306,6 +306,11 @@
       "live": "Live",
       "ended": "Ended",
       "error": "Unavailable"
-    }
+    },
+    "qrLabel": "QR code for the viewer link",
+    "scanToJoin": "Scan to follow in your language",
+    "present": "Presenter view",
+    "fullscreen": "Full screen",
+    "detectLanguage": "Detect automatically"
   }
 }

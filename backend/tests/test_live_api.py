@@ -128,6 +128,27 @@ def test_language_channel_stays_warm_for_a_grace_period(live):
     assert runtime.active_languages() == set()
 
 
+def test_opening_a_language_translates_recent_earlier_lines_once(live):
+    client, translator = live
+    sid = _start(client, source_language="en").json()["session_id"]
+    with client.websocket_connect(f"/api/live/sessions/{sid}/audio") as ws:
+        for _ in range(7):
+            ws.send_bytes(SECOND)
+    _wait(lambda: len(client.get(f"/api/live/view/{sid}/snapshot").json()["segments"]) == 2)
+    assert translator.calls == []  # nobody watching in another language yet
+
+    runtime = live_session.get_runtime(sid)
+    client.portal.call(runtime.join, "ru")  # join runs on the event loop in production
+    client.portal.call(runtime.join, "ru")  # a second viewer must not translate again
+
+    def translated():
+        snap = client.get(f"/api/live/view/{sid}/snapshot", params={"lang": "ru"}).json()
+        return all(s["translation"] for s in snap["segments"])
+
+    _wait(translated)
+    assert sorted(text for text, _ in translator.calls) == ["Test caption 1.", "Test caption 2."]
+
+
 # -- access control ----------------------------------------------------------
 
 

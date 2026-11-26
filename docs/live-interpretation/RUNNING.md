@@ -4,6 +4,13 @@ Host page: `/live` (behind the normal sign-in). Guest link: `/watch/<session>?t=
 shown on the host page. No sign-in for guests. A link works for 12 h (the live stream stops
 at session end; the transcript stays readable), and "New link" revokes every older link.
 
+The host page also shows a QR code for the link and a **Presenter view** button:
+a full-screen page for a projector (last three lines, large type, QR in the corner
+so the room can join). Add `&lang=<code>` to show one translation there.
+
+When a guest opens a language nobody had open, the last 20 lines are translated
+too, so they are not left with untranslated history.
+
 ## Speech recognition — `MEETINGOS_LIVE_ASR`
 
 | Value | What it does |

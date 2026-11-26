@@ -33,6 +33,7 @@ GRACE_S = 60.0  # keep translating a language this long after its last viewer le
 TRANSLATE_TIMEOUT_S = 15.0
 TRANSLATE_CONCURRENCY = 4
 END_DRAIN_TIMEOUT_S = 120.0  # local recognition may still be working through the tail
+BACKFILL_LINES = 20  # a newly opened language also gets this many earlier lines translated
 IDLE_END_S = 600.0  # no audio this long (host closed the tab) ends the session
 
 _runtimes: dict[str, LiveRuntime] = {}
@@ -66,6 +67,8 @@ class LiveRuntime:
         self._refs: dict[str, int] = {}
         self._left_at: dict[str, float] = {}
         self._context: deque[str] = deque(maxlen=3)
+        # (segment_id, text, language, langs already translated or in flight)
+        self._recent: deque[tuple[str, str, str | None, set[str]]] = deque(maxlen=BACKFILL_LINES)
         self._sequence = 0
         self._audio_ms = 0
         self._translations: set[asyncio.Task] = set()
@@ -123,8 +126,18 @@ class LiveRuntime:
 
     def join(self, lang: str | None) -> None:
         if lang:
+            if lang not in self.active_languages():
+                self._backfill(lang)
             self._refs[lang] = self._refs.get(lang, 0) + 1
         self._publish_count()
+
+    def _backfill(self, lang: str) -> None:
+        if self.translator is None or self.ending:
+            return
+        for segment_id, text, language, done in self._recent:
+            if language != lang and lang not in done:
+                done.add(lang)
+                self._spawn_translation(segment_id, text, language, [lang], [])
 
     def leave(self, lang: str | None) -> None:
         if lang and self._refs.get(lang):
@@ -202,14 +215,16 @@ class LiveRuntime:
                 "paragraph_break": sentence.paragraph_break,
             },
         )
-        targets = sorted(self.active_languages() - {language})
-        if targets and self.translator is not None:
-            task = asyncio.create_task(
-                self._translate(segment_id, sentence.text, language, targets, list(self._context))
-            )
-            self._translations.add(task)
-            task.add_done_callback(self._translations.discard)
+        targets = sorted(self.active_languages() - {language}) if self.translator is not None else []
+        if targets:
+            self._spawn_translation(segment_id, sentence.text, language, targets, list(self._context))
+        self._recent.append((segment_id, sentence.text, language, set(targets)))
         self._context.append(sentence.text)
+
+    def _spawn_translation(self, segment_id: str, text: str, source: str | None, targets: list[str], context) -> None:
+        task = asyncio.create_task(self._translate(segment_id, text, source, targets, context))
+        self._translations.add(task)
+        task.add_done_callback(self._translations.discard)
 
     async def _translate(self, segment_id: str, text: str, source: str | None, targets: list[str], context) -> None:
         async with self._sem:

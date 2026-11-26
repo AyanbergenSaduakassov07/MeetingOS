@@ -25,11 +25,13 @@ export function LanguagePicker({
   onChange,
   languages,
   id,
+  originalLabel,
 }: {
   value: string;
   onChange: (v: string) => void;
   languages: LiveLanguage[];
   id: string;
+  originalLabel?: string;
 }) {
   const { t } = useTranslation();
   return (
@@ -38,7 +40,7 @@ export function LanguagePicker({
         <SelectValue />
       </SelectTrigger>
       <SelectContent>
-        <SelectItem value={ORIGINAL}>{t('live.original')}</SelectItem>
+        <SelectItem value={ORIGINAL}>{originalLabel ?? t('live.original')}</SelectItem>
         {languages.map((l) => (
           <SelectItem key={l.code} value={l.code}>
             {l.native} · {l.name}

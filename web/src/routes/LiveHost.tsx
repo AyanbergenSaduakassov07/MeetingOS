@@ -1,5 +1,5 @@
 import { useMutation } from '@tanstack/react-query';
-import { Copy, Mic, MonitorUp, Square } from 'lucide-react';
+import { Copy, Mic, MonitorUp, Presentation, Square } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
@@ -11,6 +11,7 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/use-toast';
 import { liveApi, type StartedSession, startCapture, useLiveCaptions, viewerUrl } from '@/lib/live';
 import { CaptionList, LanguagePicker, ORIGINAL, useLiveLanguages } from './LiveCaptions';
+import { QrCode } from './LiveQr';
 import { StatusBadge } from './LiveViewer';
 
 type Source = 'mic' | 'tab';
@@ -71,6 +72,7 @@ function StartForm({ onStarted }: { onStarted: (s: StartedSession) => void }) {
             value={lang}
             onChange={setLang}
             languages={languages}
+            originalLabel={t('live.detectLanguage')}
           />
           <p className="text-xs text-muted-foreground">{t('live.spokenLanguageHint')}</p>
         </div>
@@ -195,6 +197,7 @@ function Running({
         <Card className="space-y-3 p-4">
           <h2 className="font-medium">{t('live.shareTitle')}</h2>
           <p className="text-xs text-muted-foreground">{t('live.shareHint')}</p>
+          <QrCode value={link} label={t('live.qrLabel')} className="mx-auto size-40" />
           <Input
             readOnly
             value={link}
@@ -221,6 +224,16 @@ function Running({
               {t('live.rotate')}
             </Button>
           </div>
+          <Button size="sm" variant="outline" className="w-full" asChild>
+            <a
+              href={`${link}&view=present${target ? `&lang=${encodeURIComponent(target)}` : ''}`}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <Presentation aria-hidden="true" className="mr-2 size-4" />
+              {t('live.present')}
+            </a>
+          </Button>
           <p className="text-sm text-muted-foreground">
             {t('live.viewers', { count: live.viewers })}
           </p>
