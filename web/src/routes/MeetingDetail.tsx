@@ -127,7 +127,7 @@ export function MeetingDetail() {
       >
         <Link
           to="/meetings"
-          className="text-sm font-medium underline underline-offset-2 hover:text-primary"
+          className="text-sm font-medium underline underline-offset-2 hover:text-link"
         >
           {t('meetings.backToList')}
         </Link>
@@ -144,7 +144,7 @@ export function MeetingDetail() {
     return (
       <StateCard
         testId="state-processing"
-        icon={<Loader2 aria-hidden="true" className="size-6 animate-spin text-primary" />}
+        icon={<Loader2 aria-hidden="true" className="size-6 animate-spin text-link" />}
         title={t('meetings.processingTitle')}
         detail={t('meetings.processingDetail')}
       />
@@ -171,7 +171,7 @@ export function MeetingDetail() {
           <header className="border-b border-border px-6 py-5">
             {/* Meeting title is content, not chrome — never translated. */}
             <h1
-              className="font-display text-2xl font-black tracking-tight"
+              className="font-display text-2xl font-semibold tracking-tight"
               data-testid="meeting-title"
             >
               {data.title}
@@ -203,7 +203,7 @@ export function MeetingDetail() {
               >
                 <Loader2
                   aria-hidden="true"
-                  className="mt-0.5 size-4 shrink-0 animate-spin text-primary"
+                  className="mt-0.5 size-4 shrink-0 animate-spin text-link"
                 />
                 <div>
                   <p className="font-medium">{t('meetings.analyzingTitle')}</p>
@@ -254,7 +254,7 @@ export function MeetingDetail() {
                     ).map(([key, count]) => (
                       <div key={key} className="rounded-lg border border-border bg-card p-4">
                         <dt className="text-sm text-muted-foreground">{t(key)}</dt>
-                        <dd className="mt-1 font-display text-2xl font-black tabular-nums">
+                        <dd className="mt-1 font-display text-2xl font-semibold tabular-nums">
                           {status === 'analyzing' && count === 0 ? '—' : count}
                         </dd>
                       </div>

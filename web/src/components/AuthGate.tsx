@@ -61,11 +61,11 @@ function LoginScreen() {
       <form
         onSubmit={submit}
         data-testid="login-form"
-        className="w-full max-w-sm space-y-5 rounded-xl border border-border bg-card p-8 shadow-sm"
+        className="w-full max-w-sm space-y-5 rounded-lg border border-border bg-card p-8"
       >
         <div className="flex items-center gap-3">
           <img src="/favicon.svg" alt="" className="size-10" />
-          <h1 className="font-display text-2xl font-black tracking-tight">{t('nav.brand')}</h1>
+          <h1 className="font-display text-2xl font-semibold tracking-tight">{t('nav.brand')}</h1>
         </div>
         <p className="text-sm text-muted-foreground">{t('auth.prompt')}</p>
 

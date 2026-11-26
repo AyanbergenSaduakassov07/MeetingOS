@@ -235,23 +235,19 @@ def capture_screenshots(page) -> None:
     SHOTS.mkdir(parents=True, exist_ok=True)
     meeting_id = completed_meeting_id(page)
 
-    for theme in ("light", "dark"):
-        for language in ("en", "ru"):
-            page.goto(f"{BASE}/meetings/{meeting_id}")
-            page.wait_for_load_state("networkidle")
-            page.evaluate(
-                "(t) => document.documentElement.classList.toggle('dark', t === 'dark')",
-                theme,
-            )
-            page.get_by_role("button", name=language.upper(), exact=True).click()
-            page.locator('[data-testid="tab-decisions"]').click()
-            expect(
-                page.locator('[data-testid="player-bar"][data-ready="true"]')
-            ).to_be_attached(timeout=30_000)
-            page.wait_for_timeout(400)  # let the waveform finish painting
-            path = SHOTS / f"meeting-{theme}-{language}.png"
-            page.screenshot(path=str(path))
-            print(f"  ✓ {path.name}")
+    # Light only, by product decision: there is no dark palette to capture.
+    for language in ("en", "ru"):
+        page.goto(f"{BASE}/meetings/{meeting_id}")
+        page.wait_for_load_state("networkidle")
+        page.get_by_role("button", name=language.upper(), exact=True).click()
+        page.locator('[data-testid="tab-decisions"]').click()
+        expect(
+            page.locator('[data-testid="player-bar"][data-ready="true"]')
+        ).to_be_attached(timeout=30_000)
+        page.wait_for_timeout(400)  # let the waveform finish painting
+        path = SHOTS / f"meeting-{language}.png"
+        page.screenshot(path=str(path))
+        print(f"  ✓ {path.name}")
 
 
 def main() -> int:

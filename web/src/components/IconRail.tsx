@@ -42,7 +42,7 @@ export function IconRail() {
         to="/dashboard"
         aria-label={t('nav.brand')}
         title={t('nav.brand')}
-        className="size-12 shrink-0 rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        className="size-12 shrink-0 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
         <img src="/favicon.svg" alt="" className="size-12" />
       </NavLink>

@@ -17,7 +17,9 @@ export function SettingsLayout() {
   return (
     <div>
       <div className="mx-auto max-w-4xl px-6 pt-8">
-        <h1 className="font-display text-3xl font-black tracking-tight">{t('settings.title')}</h1>
+        <h1 className="font-display text-3xl font-semibold tracking-tight">
+          {t('settings.title')}
+        </h1>
         <nav aria-label={t('settings.title')} className="mt-4 flex gap-1 border-b border-border">
           {SECTIONS.map(({ to, labelKey }) => (
             <NavLink

@@ -107,7 +107,7 @@ export function CopilotPanel({ meetingId }: { meetingId: string }) {
       className="flex h-full min-h-0 flex-col border-l border-border bg-card"
     >
       <header className="flex shrink-0 items-center gap-2 border-b border-border px-4 py-3">
-        <Sparkles aria-hidden="true" className="size-4 text-primary" />
+        <Sparkles aria-hidden="true" className="size-4 text-link" />
         <h2 className="flex-1 font-display text-sm font-bold">{t('copilot.title')}</h2>
         {turns.length > 0 && (
           <button
@@ -137,7 +137,7 @@ export function CopilotPanel({ meetingId }: { meetingId: string }) {
               <div key={turn.id} className="space-y-3">
                 <div
                   data-role="user"
-                  className="ml-auto w-fit max-w-[85%] rounded-2xl rounded-br-md bg-secondary px-3.5 py-2 text-sm text-foreground"
+                  className="ml-auto w-fit max-w-[85%] rounded-lg rounded-br-sm bg-secondary px-3.5 py-2 text-sm text-foreground"
                 >
                   {turn.question}
                 </div>
@@ -173,7 +173,7 @@ export function CopilotPanel({ meetingId }: { meetingId: string }) {
         <label htmlFor="copilot-input" className="sr-only">
           {t('copilot.placeholder')}
         </label>
-        <div className="flex items-end gap-2 rounded-2xl border border-border bg-background px-3 py-2 shadow-sm transition-shadow focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/30">
+        <div className="flex items-end gap-2 rounded-lg border border-border bg-background px-3 py-2 transition-shadow focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/20">
           <textarea
             ref={inputRef}
             id="copilot-input"
@@ -227,8 +227,8 @@ function EmptyState({ onPick }: { onPick: (question: string) => void }) {
   return (
     <div className="flex h-full flex-col justify-center gap-4">
       <div className="space-y-2 text-center">
-        <span className="mx-auto flex size-10 items-center justify-center rounded-full bg-primary/15">
-          <Sparkles aria-hidden="true" className="size-5 text-primary" />
+        <span className="mx-auto flex size-10 items-center justify-center rounded-full bg-link-tint">
+          <Sparkles aria-hidden="true" className="size-5 text-link" />
         </span>
         <p className="font-display text-base font-bold">{t('copilot.emptyTitle')}</p>
         <p className="text-sm text-muted-foreground">{t('copilot.empty')}</p>
@@ -238,7 +238,7 @@ function EmptyState({ onPick }: { onPick: (question: string) => void }) {
           <li key={key}>
             <button
               type="button"
-              className="group flex w-full items-center gap-2 rounded-xl border border-border px-3 py-2.5 text-left text-sm transition-colors hover:border-primary/50 hover:bg-secondary"
+              className="group flex w-full items-center gap-2 rounded-lg border border-border px-3 py-2.5 text-left text-sm transition-colors hover:border-input hover:bg-secondary"
               onClick={() => onPick(t(key))}
             >
               <span className="flex-1">{t(key)}</span>
@@ -257,8 +257,8 @@ function EmptyState({ onPick }: { onPick: (question: string) => void }) {
 export function AssistantRow({ children }: { children: ReactNode }) {
   return (
     <div className="flex gap-2.5">
-      <span className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-primary/15">
-        <Sparkles aria-hidden="true" className="size-3.5 text-primary" />
+      <span className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-link-tint">
+        <Sparkles aria-hidden="true" className="size-3.5 text-link" />
       </span>
       <div className="min-w-0 flex-1">{children}</div>
     </div>
@@ -311,7 +311,7 @@ function Answer({ response }: { response: AskResponse }) {
       <div
         data-role="assistant"
         data-state="not-discussed"
-        className="flex items-start gap-2 rounded-xl bg-secondary px-3 py-2 text-sm text-secondary-foreground"
+        className="flex items-start gap-2 rounded-lg bg-secondary px-3 py-2 text-sm text-secondary-foreground"
       >
         <Info aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
         <span>{t('copilot.notDiscussed')}</span>

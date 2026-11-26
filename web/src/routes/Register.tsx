@@ -102,7 +102,9 @@ export function Register({ kind }: { kind: RegisterKind }) {
   return (
     <div className="mx-auto max-w-4xl px-6 py-8" data-testid={`register-${kind}`}>
       <header className="flex flex-wrap items-baseline justify-between gap-3">
-        <h1 className="font-display text-3xl font-black tracking-tight">{t(`register.${kind}`)}</h1>
+        <h1 className="font-display text-3xl font-semibold tracking-tight">
+          {t(`register.${kind}`)}
+        </h1>
         <Link
           to="/dashboard"
           className="text-sm text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"

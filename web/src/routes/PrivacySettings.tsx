@@ -51,7 +51,7 @@ export function PrivacySettings() {
 
   return (
     <div className="mx-auto max-w-4xl px-6 py-8" data-testid="privacy-settings">
-      <h1 className="font-display text-3xl font-black tracking-tight">{t('privacy.title')}</h1>
+      <h1 className="font-display text-3xl font-semibold tracking-tight">{t('privacy.title')}</h1>
       <p className="mt-1 text-sm text-muted-foreground">{t('privacy.subtitle')}</p>
 
       {/* -- providers -------------------------------------------------- */}

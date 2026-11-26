@@ -7,10 +7,12 @@
  * Variable names follow the shadcn/ui convention so the components in
  * components/ui read them unchanged.
  *
- * Lime (--primary / --accent) is the brand signal and carries no status
- * meaning. Status lives in --good and --warn, which is why they are separate
- * tokens: a verified decision must not read as "brand", and the brand must
- * not read as "this is fine".
+ * Light only, by product decision (2026-11): no .dark palette.
+ *
+ * Lime (--primary) is a fill only: logo mark, primary button, selected nav
+ * tint. It never colours text; links and focus use olive (--link / --ring),
+ * which keeps AA contrast on white. Status lives in --good and --warn so a
+ * verified decision never reads as "brand".
  */
 
 @theme {
@@ -18,8 +20,8 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
 
-  --font-display: "Golos Text", "Manrope", ui-sans-serif, system-ui, sans-serif;
-  --font-sans: "Manrope", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-display: "IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-sans: "IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
 
   --color-background: hsl(var(--background));
@@ -49,6 +51,8 @@
   --color-border: hsl(var(--border));
   --color-input: hsl(var(--input));
   --color-ring: hsl(var(--ring));
+  --color-link: hsl(var(--link));
+  --color-link-tint: hsl(var(--link-tint));
 
   /* Status, deliberately not derived from --primary. */
   --color-good: hsl(var(--good));
@@ -58,58 +62,34 @@
 }
 
 :root {
-  --background: 84 30% 96%; /* #F4F6EF */
-  --foreground: 200 12% 8%; /* #14181A */
+  color-scheme: light;
+  --background: 220 20% 97.1%; /* #F6F7F9 */
+  --foreground: 221 31% 10.2%; /* #121722 */
   --card: 0 0% 100%;
-  --card-foreground: 200 12% 8%;
+  --card-foreground: 221 31% 10.2%;
   --popover: 0 0% 100%;
-  --popover-foreground: 200 12% 8%;
-  --primary: 74 82% 47%; /* #C6E619 lime */
-  --primary-foreground: 90 55% 10%;
-  --accent: 74 82% 47%;
-  --accent-foreground: 90 55% 10%;
-  --secondary: 90 15% 92%;
-  --secondary-foreground: 200 12% 14%;
-  --muted: 90 12% 90%;
-  --muted-foreground: 200 6% 45%;
-  --destructive: 4 50% 40%;
+  --popover-foreground: 221 31% 10.2%;
+  --primary: 69 80% 50%; /* #C6E619 lime, fill only */
+  --primary-foreground: 93 52% 8.2%; /* #14200A */
+  --secondary: 220 21% 94.5%; /* #EEF0F4 */
+  --secondary-foreground: 221 31% 10.2%;
+  --muted: 220 21% 94.5%;
+  --muted-foreground: 223 12% 43%; /* AA on --background and --muted */
+  --accent: 72 69% 90%; /* #F0F7D4 hover / selected tint */
+  --accent-foreground: 74 100% 19%;
+  --destructive: 4 76% 40%; /* #B42318 */
   --destructive-foreground: 0 0% 100%;
-  --border: 88 18% 85%;
-  --input: 88 18% 80%;
-  --ring: 74 82% 47%;
-  --radius: 0.5rem;
+  --border: 220 17% 89.6%; /* #E0E3E9 */
+  --input: 220 16% 81.8%; /* #C9CED8 */
+  --ring: 74 100% 19%; /* olive #4A6100 */
+  --link: 74 100% 19%;
+  --link-tint: 72 69% 90%;
+  --radius: 0.375rem; /* 6px */
 
-  --good: 150 45% 27%; /* confirmed decision */
-  --good-tint: 150 45% 92%;
-  --warn: 32 80% 38%; /* medium risk */
-  --warn-tint: 32 80% 92%;
-}
-
-.dark {
-  --background: 200 10% 7%;
-  --foreground: 84 25% 94%;
-  --card: 200 8% 11%;
-  --card-foreground: 84 25% 94%;
-  --popover: 200 8% 11%;
-  --popover-foreground: 84 25% 94%;
-  --primary: 74 90% 58%;
-  --primary-foreground: 90 55% 8%;
-  --accent: 74 90% 58%;
-  --accent-foreground: 90 55% 8%;
-  --secondary: 200 8% 16%;
-  --secondary-foreground: 84 25% 94%;
-  --muted: 200 8% 16%;
-  --muted-foreground: 200 6% 62%;
-  --destructive: 4 55% 52%;
-  --destructive-foreground: 0 0% 100%;
-  --border: 200 10% 18%;
-  --input: 200 10% 22%;
-  --ring: 74 90% 58%;
-
-  --good: 150 40% 55%;
-  --good-tint: 150 40% 15%;
-  --warn: 32 75% 55%;
-  --warn-tint: 32 75% 15%;
+  --good: 150 60% 28.4%; /* #1D7449 confirmed decision */
+  --good-tint: 143 33% 92.4%;
+  --warn: 33 92% 31.4%; /* #9A5806 needs a check */
+  --warn-tint: 37 79% 92.4%;
 }
 
 @layer base {
@@ -122,7 +102,9 @@
   h1,
   h2,
   h3 {
-    @apply font-display;
+    @apply font-display font-semibold;
+    letter-spacing: -0.01em;
+    text-wrap: balance;
   }
   /* Timestamps and extraction scores sit in columns; tabular figures stop
    * the layout twitching as digits change. */

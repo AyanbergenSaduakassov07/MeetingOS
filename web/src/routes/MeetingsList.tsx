@@ -41,7 +41,9 @@ export function MeetingsList() {
   return (
     <div className="mx-auto max-w-4xl px-6 py-10">
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <h1 className="font-display text-3xl font-black tracking-tight">{t('meetings.title')}</h1>
+        <h1 className="font-display text-3xl font-semibold tracking-tight">
+          {t('meetings.title')}
+        </h1>
 
         <div>
           <input

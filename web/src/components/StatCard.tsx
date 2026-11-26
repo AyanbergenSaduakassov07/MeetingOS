@@ -53,7 +53,7 @@ export function StatCard({
       </div>
       <span
         className={cn(
-          'font-display text-4xl font-black tabular-nums leading-none',
+          'font-display text-4xl font-semibold tabular-nums leading-none',
           TONE_STYLES[stat.tone],
         )}
       >

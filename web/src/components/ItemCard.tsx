@@ -70,7 +70,7 @@ export function ItemCard({ item, kind }: { item: ExtractedItem; kind: ItemKind }
       data-kind={kind}
       data-verification={item.verification_status}
       className={cn(
-        'rounded-lg border bg-card p-4 shadow-sm transition-colors duration-150',
+        'rounded-lg border bg-card p-4 transition-colors duration-150',
         // The border is part of the signal: a reader scanning a long list must
         // be able to see which cards need attention without reading each chip.
         item.verification_status === 'unsupported'

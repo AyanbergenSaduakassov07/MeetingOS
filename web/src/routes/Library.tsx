@@ -27,7 +27,7 @@ export function Library() {
 
   return (
     <div className="mx-auto max-w-4xl px-6 py-8" data-testid="library">
-      <h1 className="font-display text-3xl font-black tracking-tight">{t('library.title')}</h1>
+      <h1 className="font-display text-3xl font-semibold tracking-tight">{t('library.title')}</h1>
       <p className="mt-1 text-sm text-muted-foreground">{t('library.subtitle')}</p>
 
       <form
@@ -57,7 +57,7 @@ export function Library() {
             value={title}
             onChange={(event) => setTitle(event.target.value)}
             maxLength={300}
-            className="rounded-md border border-border bg-background px-3 py-1.5 outline-none focus:border-primary"
+            className="rounded-md border border-border bg-background px-3 py-1.5 outline-none focus:border-ring"
           />
         </label>
         <label className="flex items-center gap-2 pb-1.5 text-sm">
