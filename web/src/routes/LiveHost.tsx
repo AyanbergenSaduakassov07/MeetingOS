@@ -52,10 +52,10 @@ function StartForm({ onStarted }: { onStarted: (s: StartedSession) => void }) {
   });
 
   return (
-    <div className="mx-auto max-w-xl p-8">
-      <h1 className="mb-2 text-2xl font-semibold">{t('live.title')}</h1>
+    <div className="mx-auto max-w-xl px-4 py-8 sm:px-6">
+      <h1 className="mb-2 font-display text-2xl font-semibold">{t('live.title')}</h1>
       <p className="mb-6 text-muted-foreground">{t('live.intro')}</p>
-      <Card className="space-y-5 p-6">
+      <Card className="space-y-5 p-4 sm:p-6">
         <div className="space-y-1.5">
           <Label htmlFor="live-title">{t('live.meetingTitle')}</Label>
           <Input
@@ -78,9 +78,10 @@ function StartForm({ onStarted }: { onStarted: (s: StartedSession) => void }) {
         </div>
         <fieldset className="space-y-1.5">
           <legend className="text-sm font-medium">{t('live.audioSource')}</legend>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <Button
               type="button"
+              aria-pressed={source === 'mic'}
               variant={source === 'mic' ? 'default' : 'outline'}
               onClick={() => setSource('mic')}
             >
@@ -89,6 +90,7 @@ function StartForm({ onStarted }: { onStarted: (s: StartedSession) => void }) {
             </Button>
             <Button
               type="button"
+              aria-pressed={source === 'tab'}
               variant={source === 'tab' ? 'default' : 'outline'}
               onClick={() => setSource('tab')}
             >
@@ -172,10 +174,12 @@ function Running({
   });
 
   return (
-    <div className="mx-auto grid max-w-6xl gap-6 p-6 lg:grid-cols-[1fr_320px]">
+    <div className="mx-auto grid max-w-6xl gap-6 px-4 py-6 sm:px-6 lg:grid-cols-[minmax(0,1fr)_320px]">
       <section className="min-w-0">
-        <div className="mb-4 flex flex-wrap items-center gap-4">
-          <h1 className="mr-auto text-xl font-semibold">{live.title}</h1>
+        <div className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-2">
+          <h1 className="mr-auto min-w-0 break-words font-display text-xl font-semibold">
+            {live.title}
+          </h1>
           <StatusBadge state={live.state} />
           <LanguagePicker id="host-lang" value={lang} onChange={setLang} languages={languages} />
         </div>
@@ -184,7 +188,7 @@ function Running({
             {t('live.captureFailed', { error: captureError })}
           </p>
         )}
-        <Card className="max-h-[70dvh] overflow-y-auto p-6">
+        <Card className="max-h-[70dvh] overflow-y-auto p-4 sm:p-6">
           <CaptionList
             captions={live.captions}
             partial={live.partial}
@@ -193,7 +197,7 @@ function Running({
           />
         </Card>
       </section>
-      <aside className="space-y-4">
+      <aside className="min-w-0 space-y-4">
         <Card className="space-y-3 p-4">
           <h2 className="font-medium">{t('live.shareTitle')}</h2>
           <p className="text-xs text-muted-foreground">{t('live.shareHint')}</p>
@@ -204,7 +208,7 @@ function Running({
             onFocus={(e) => e.target.select()}
             aria-label={t('live.shareTitle')}
           />
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <Button
               size="sm"
               variant="outline"
@@ -263,10 +267,10 @@ function Running({
 function Ended({ meetingId, onAgain }: { meetingId: string; onAgain: () => void }) {
   const { t } = useTranslation();
   return (
-    <div className="mx-auto max-w-xl space-y-4 p-8 text-center">
-      <h1 className="text-2xl font-semibold">{t('live.endedTitle')}</h1>
+    <div className="mx-auto max-w-xl space-y-4 px-4 py-8 text-center sm:px-6">
+      <h1 className="font-display text-2xl font-semibold">{t('live.endedTitle')}</h1>
       <p className="text-muted-foreground">{t('live.endedBody')}</p>
-      <div className="flex justify-center gap-3">
+      <div className="flex flex-wrap justify-center gap-3">
         <Button asChild>
           <Link to={`/meetings/${meetingId}`}>{t('live.openMeeting')}</Link>
         </Button>
