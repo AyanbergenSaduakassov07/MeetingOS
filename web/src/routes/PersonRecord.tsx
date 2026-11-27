@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Loader2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router-dom';
+import { ErrorNotice } from '@/components/ErrorNotice';
 import { FollowUpList } from '@/components/FollowUpList';
 import { api, type PersonCommitments } from '@/lib/api';
 import { formatCompletionRate } from '@/lib/followups';
@@ -125,9 +126,12 @@ export function PersonRecord() {
         </output>
       )}
       {history.isError && (
-        <p role="alert" className="mt-6 text-sm text-destructive">
-          {t('person.loadFailed')}
-        </p>
+        <ErrorNotice
+          className="mt-6"
+          message={t('person.loadFailed')}
+          error={history.error}
+          onRetry={() => void history.refetch()}
+        />
       )}
       {person && (
         <>

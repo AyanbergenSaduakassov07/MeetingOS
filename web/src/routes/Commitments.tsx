@@ -3,6 +3,7 @@ import { Loader2 } from 'lucide-react';
 import { useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useSearchParams } from 'react-router-dom';
+import { ErrorNotice } from '@/components/ErrorNotice';
 import { FollowUpList } from '@/components/FollowUpList';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -219,9 +220,11 @@ export function Commitments() {
             </output>
           )}
           {results.isError && (
-            <p role="alert" className="text-sm text-destructive">
-              {t('followups.loadFailed')}
-            </p>
+            <ErrorNotice
+              message={t('followups.loadFailed')}
+              error={results.error}
+              onRetry={() => void results.refetch()}
+            />
           )}
           {results.data && (!personView || owner) && (
             <RegisterResults items={results.data.items} total={results.data.total} />

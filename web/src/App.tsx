@@ -2,6 +2,7 @@ import { ChevronsRight } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
+import { cn } from '@/lib/utils';
 import { AuthGate } from './components/AuthGate';
 import { CommandPalette } from './components/CommandPalette';
 import { Sidebar } from './components/Sidebar';
@@ -110,7 +111,12 @@ function Shell() {
         )}
 
         {/* The shell owns the viewport height; pages use h-full, never h-dvh. */}
-        <main id="main" tabIndex={-1} className="min-h-0 min-w-0 flex-1 overflow-y-auto">
+        <main
+          id="main"
+          tabIndex={-1}
+          // Phones: room for the floating show-sidebar button so it never covers a title.
+          className={cn('min-h-0 min-w-0 flex-1 overflow-y-auto', sidebarHidden && 'max-md:pt-12')}
+        >
           <Routes>
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
             <Route path="/dashboard" element={<Dashboard />} />

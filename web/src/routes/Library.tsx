@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { FileText, Loader2, Lock, Upload } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { ErrorNotice } from '@/components/ErrorNotice';
 import { api } from '@/lib/api';
 
 const ACCEPT = '.pdf,.txt,.md,.docx,.pptx';
@@ -98,9 +99,12 @@ export function Library() {
           {t('common.loading')}
         </p>
       ) : documents.isError ? (
-        <p role="alert" className="mt-8 text-sm text-destructive">
-          {documents.error.message}
-        </p>
+        <ErrorNotice
+          className="mt-8"
+          message={t('library.listFailed')}
+          error={documents.error}
+          onRetry={() => void documents.refetch()}
+        />
       ) : documents.data?.length ? (
         <ul className="mt-6 space-y-2" data-testid="library-list">
           {documents.data.map((doc) => (

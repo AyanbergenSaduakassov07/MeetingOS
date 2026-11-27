@@ -1,7 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
-import { AlertCircle, Loader2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
+import { ErrorNotice } from '@/components/ErrorNotice';
 import {
   EmptyWorkspace,
   NeedsAttention,
@@ -37,18 +38,19 @@ export function Dashboard() {
     );
   }
 
-  if (dashboard.isError || !dashboard.data) {
+  if (dashboard.isError || meetings.isError || !dashboard.data) {
     return (
-      <output
-        data-testid="dashboard-error"
-        className="mx-auto mt-16 flex max-w-md flex-col items-center gap-3 rounded-lg border border-border bg-card p-8 text-center"
-      >
-        <AlertCircle aria-hidden="true" className="size-6 text-destructive" />
-        <h2 className="font-display text-lg font-bold">{t('dashboard.loadFailed')}</h2>
-        <p className="text-sm text-muted-foreground">
-          {dashboard.error instanceof Error ? dashboard.error.message : ''}
-        </p>
-      </output>
+      <div className="mx-auto max-w-xl px-6 py-16">
+        <ErrorNotice
+          testId="dashboard-error"
+          message={t('dashboard.loadFailed')}
+          error={dashboard.error ?? meetings.error}
+          onRetry={() => {
+            void dashboard.refetch();
+            void meetings.refetch();
+          }}
+        />
+      </div>
     );
   }
 
