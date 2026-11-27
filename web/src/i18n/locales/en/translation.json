@@ -25,7 +25,7 @@
     "current": "(current)",
     "copilot": "Copilot",
     "library": "Library",
-    "dashboard": "Dashboard",
+    "dashboard": "Home",
     "live": "Live captions",
     "commitments": "Commitments",
     "new": "New",
@@ -468,6 +468,32 @@
       "revisited": "Revisited",
       "reversed": "Reversed",
       "superseded": "Superseded"
+    }
+  },
+  "home": {
+    "title": "Home",
+    "updated": "Updated {{time}}",
+    "register": "Register",
+    "needsAttention": "Needs attention",
+    "allClear": "Nothing needs attention right now.",
+    "overdue": "Overdue",
+    "due": "due {{date}}",
+    "checkQuote": "Check quote",
+    "checkHint": "The verifier is unsure the quote supports this.",
+    "recentMeetings": "Recent meetings",
+    "allMeetings": "All meetings",
+    "upcoming": "Upcoming",
+    "briefHint": "Collect open items, unresolved decisions and recent changes for the people you are meeting.",
+    "prepareBrief": "Prepare a brief",
+    "emptyTitle": "No meetings yet",
+    "emptyHint": "Start with one of these. Items appear here once a meeting is processed.",
+    "first": {
+      "upload": "Upload a recording",
+      "uploadHint": "We transcribe it, extract decisions and follow-ups, and check each against the transcript.",
+      "live": "Start a live session",
+      "liveHint": "Live captions and translation for people in the room or joining by link.",
+      "library": "Add a document",
+      "libraryHint": "Agendas and reports the copilot can cite next to your meetings."
     }
   }
 }
