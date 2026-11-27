@@ -1,0 +1,198 @@
+{
+ "recording": "clinic-app-release.mp3",
+ "actual_start": "2026-11-20T09:30:00+00:00",
+ "summary": "Release goes ahead on Monday the 20th only if the payment fix passes testing by Friday; Zhanna lines up a backup date; dropping in-app chat is still open.",
+ "consent_note": "Demo data: synthetic voices, no real people.",
+ "title": "Clinic app v2 release go/no-go",
+ "language": "en",
+ "people": [
+  "Aigerim",
+  "Arman",
+  "Zhanna"
+ ],
+ "duration_seconds": 95,
+ "segments": [
+  {
+   "start": 0.0,
+   "end": 6.11,
+   "speaker": "Aigerim",
+   "text": "Let's start. This is the go or no-go for version two of the clinic booking app. Arman, where is the build?"
+  },
+  {
+   "start": 6.71,
+   "end": 16.86,
+   "speaker": "Arman",
+   "text": "The release candidate passed all automated tests last night. One bug is still open: on older Android phones the payment screen freezes after the card is entered."
+  },
+  {
+   "start": 17.46,
+   "end": 19.33,
+   "speaker": "Aigerim",
+   "text": "How many users does that affect?"
+  },
+  {
+   "start": 19.93,
+   "end": 27.98,
+   "speaker": "Arman",
+   "text": "About six percent of our active users are on those phones. I can ship a fix by Thursday, but it needs a day of testing."
+  },
+  {
+   "start": 28.58,
+   "end": 36.47,
+   "speaker": "Zhanna",
+   "text": "The marketing campaign is booked for Monday the twentieth. Moving it costs us the newsletter slot, and we would wait three weeks for the next one."
+  },
+  {
+   "start": 37.07,
+   "end": 49.09,
+   "speaker": "Aigerim",
+   "text": "Then here is the decision. We release on Monday the twentieth, but only after Arman's payment fix passes testing. If the fix is not verified by Friday evening, we hold the release and Zhanna moves the campaign."
+  },
+  {
+   "start": 49.69,
+   "end": 55.2,
+   "speaker": "Zhanna",
+   "text": "Agreed. I will prepare a backup date with the newsletter team by Wednesday, just in case."
+  },
+  {
+   "start": 55.8,
+   "end": 59.41,
+   "speaker": "Arman",
+   "text": "I will have the payment fix ready for testing by Thursday noon."
+  },
+  {
+   "start": 60.01,
+   "end": 66.97,
+   "speaker": "Aigerim",
+   "text": "One more risk. Our support team has only two people for launch week. If sign-ups spike, response times will slip."
+  },
+  {
+   "start": 67.57,
+   "end": 71.76,
+   "speaker": "Zhanna",
+   "text": "Could we ask the sales team to cover chat support for the first three days?"
+  },
+  {
+   "start": 72.36,
+   "end": 81.17,
+   "speaker": "Aigerim",
+   "text": "Maybe. I will ask the head of sales today and confirm by tomorrow. Let's also consider dropping the in-app chat for launch, but nobody decided that yet."
+  },
+  {
+   "start": 81.77,
+   "end": 87.38,
+   "speaker": "Arman",
+   "text": "One last thing: we should turn on crash reporting before release. I'll do that this week."
+  },
+  {
+   "start": 87.98,
+   "end": 94.15,
+   "speaker": "Aigerim",
+   "text": "Good. So: fix by Thursday, verify by Friday, release Monday. Thanks everyone."
+  }
+ ],
+ "decisions": [
+  {
+   "title": "Release conditional on payment fix testing",
+   "status": "agreed",
+   "decision_maker": null,
+   "segment": 5,
+   "verification_status": "verified",
+   "score": 1.0
+  }
+ ],
+ "action_items": [
+  {
+   "title": "Prepare a backup date with the newsletter team",
+   "assignee": "Zhanna",
+   "due_date": null,
+   "segment": 6,
+   "verification_status": "verified",
+   "score": 1.0
+  },
+  {
+   "title": "Have payment fix ready for testing",
+   "assignee": "Arman",
+   "due_date": null,
+   "segment": 7,
+   "verification_status": "verified",
+   "score": 1.0
+  },
+  {
+   "title": "Ask head of sales about chat support coverage",
+   "assignee": "Aigerim",
+   "due_date": null,
+   "segment": 10,
+   "verification_status": "verified",
+   "score": 1.0
+  },
+  {
+   "title": "Turn on crash reporting",
+   "assignee": "Arman",
+   "due_date": null,
+   "segment": 11,
+   "verification_status": "verified",
+   "score": 1.0
+  }
+ ],
+ "risks": [
+  {
+   "title": "Payment screen freezes on older Android phones",
+   "severity": "medium",
+   "owner": null,
+   "segment": 1,
+   "verification_status": "verified",
+   "score": 1.0
+  },
+  {
+   "title": "Loss of newsletter slot if marketing campaign is delayed",
+   "severity": "medium",
+   "owner": null,
+   "segment": 4,
+   "verification_status": "verified",
+   "score": 1.0
+  },
+  {
+   "title": "Support team understaffing during launch week",
+   "severity": "medium",
+   "owner": null,
+   "segment": 8,
+   "verification_status": "verified",
+   "score": 1.0
+  }
+ ],
+ "commitments": [
+  {
+   "text": "Prepare a backup date with the newsletter team (due as stated: Wednesday)",
+   "committer": "Zhanna",
+   "due_date": null,
+   "segment": 6,
+   "verification_status": "verified",
+   "score": 1.0
+  },
+  {
+   "text": "Have the payment fix ready for testing (due as stated: Thursday noon)",
+   "committer": "Arman",
+   "due_date": null,
+   "segment": 7,
+   "verification_status": "verified",
+   "score": 1.0
+  },
+  {
+   "text": "Ask the head of sales today and confirm by tomorrow (due as stated: tomorrow)",
+   "committer": "Aigerim",
+   "due_date": null,
+   "segment": 10,
+   "verification_status": "verified",
+   "score": 1.0
+  },
+  {
+   "text": "Turn on crash reporting (due as stated: this week)",
+   "committer": "Arman",
+   "due_date": null,
+   "segment": 11,
+   "verification_status": "verified",
+   "score": 1.0
+  }
+ ]
+}

@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import json
 import logging
+import mimetypes
 import os
 from datetime import UTC, datetime
 from pathlib import Path
@@ -520,7 +521,8 @@ async def get_meeting_audio(meeting_id: str, db: Session = Depends(get_db)) -> F
             status_code=status.HTTP_404_NOT_FOUND,
             detail="The stored recording is no longer on disk.",
         )
-    return FileResponse(path, media_type="audio/wav", filename=path.name)
+    media_type = mimetypes.guess_type(path.name)[0] or "audio/wav"
+    return FileResponse(path, media_type=media_type, filename=path.name)
 
 
 class PrepareRequest(BaseModel):

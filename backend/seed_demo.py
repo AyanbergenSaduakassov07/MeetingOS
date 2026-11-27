@@ -1,9 +1,12 @@
-"""Seed a deterministic demo dataset: one org, one completed meeting, no API calls.
+"""Seed a deterministic demo dataset: one org, three recorded meetings, no API calls.
 
 The Playwright suites in ``web/tests`` need a completed meeting with a playable
 recording, cited decisions (one verified, one low-confidence), action items,
 a risk and commitments including an overdue one. CI has no model keys, so this
 writes those rows directly instead of running the pipeline.
+
+The other two meetings are real pipeline output frozen into ``backend/demo/*.json``
+(transcript, speakers and the extracted, fact-checked items) next to their audio.
 
     python -m backend.seed_demo --data-dir data
 """
@@ -11,8 +14,10 @@ writes those rows directly instead of running the pipeline.
 from __future__ import annotations
 
 import argparse
+import json
 import logging
 import math
+import shutil
 import struct
 import wave
 from datetime import UTC, datetime, timedelta
@@ -35,6 +40,8 @@ from .database.models import (
 
 logger = logging.getLogger(__name__)
 
+DEMO_DIR = Path(__file__).parent / "demo"
+FIXTURES = ("akorda-kz-ru-talks.json", "clinic-app-release.json")
 SEGMENT_MS = 8000
 SAMPLE_RATE = 8000
 PEOPLE = (("Priya", "priya@demo.local"), ("Dana", "dana@demo.local"), ("Sam", "sam@demo.local"))
@@ -81,8 +88,83 @@ def _evidence(org: Organization, meeting: Meeting, segment: TranscriptSegment, s
     return evidence
 
 
+def _seed_fixture(db, org: Organization, users: dict[str, User], data_dir: Path, name: str) -> Meeting:
+    """One meeting from a frozen pipeline run: audio, speakers, segments and cited items."""
+    fx = json.loads((DEMO_DIR / name).read_text(encoding="utf-8"))
+    for person in fx["people"]:
+        if person not in users:
+            slug = person.lower().replace(" ", ".").replace("-", ".")
+            users[person] = User(org_id=org.id, email=f"{slug}@demo.local", full_name=person)
+            db.add(users[person])
+    db.flush()
+
+    recording = data_dir / "recordings" / fx["recording"]
+    recording.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copyfile(DEMO_DIR / fx["recording"], recording)
+    start = datetime.fromisoformat(fx["actual_start"])
+    meeting = Meeting(
+        org_id=org.id,
+        title=fx["title"],
+        status=MeetingStatus.COMPLETED.value,
+        source="upload",
+        language=fx["language"],
+        recording_path=config.to_storage_path(recording),
+        audio_duration_seconds=fx["duration_seconds"],
+        actual_start=start,
+        created_at=start,  # the list sorts by created_at; keeps robotics (seeded "now") first
+        summary=fx["summary"],
+        consent_confirmed_at=start,
+        consent_note=fx["consent_note"],
+    )
+    db.add(meeting)
+    db.flush()
+
+    labels = dict.fromkeys(s["speaker"] for s in fx["segments"])
+    speakers = {
+        label: Speaker(meeting_id=meeting.id, user_id=users[label].id if label in users else None, display_label=label)
+        for label in labels
+    }
+    db.add_all(speakers.values())
+    db.flush()
+    segments = [
+        TranscriptSegment(
+            meeting_id=meeting.id,
+            speaker_id=speakers[s["speaker"]].id,
+            sequence=i,
+            start_ms=round(s["start"] * 1000),
+            end_ms=round(s["end"] * 1000),
+            text=s["text"],
+            confidence=0.9,
+            language=s.get("language", fx["language"]),
+        )
+        for i, s in enumerate(fx["segments"])
+    ]
+    db.add_all(segments)
+    db.flush()
+
+    def cite(item: dict) -> Evidence:
+        return _evidence(org, meeting, segments[item["segment"]], item["verification_status"], item["score"])
+
+    def person(name: str | None) -> str | None:
+        return users[name].id if name in users else None
+
+    base = {"org_id": org.id, "meeting_id": meeting.id}
+    db.add_all(
+        [
+            Decision(**base, title=d["title"], status=d["status"], decision_maker_id=person(d["decision_maker"]),
+                     decided_at=start if d["status"] == "agreed" else None, evidence=cite(d))
+            for d in fx["decisions"]
+        ]
+        + [ActionItem(**base, title=a["title"], assignee_id=person(a["assignee"]), evidence=cite(a)) for a in fx["action_items"]]
+        + [Risk(**base, title=r["title"], severity=r["severity"], owner_id=person(r["owner"]), evidence=cite(r)) for r in fx["risks"]]
+        # Due dates stay in the text ("due as stated: ..."): dated rows would drift into overdue as the demo ages.
+        + [Commitment(**base, committer_id=person(c["committer"]), text=c["text"], evidence=cite(c)) for c in fx["commitments"]]
+    )
+    return meeting
+
+
 def seed(data_dir: Path) -> str:
-    """Create the dataset in ``data_dir`` and return the meeting id. Refuses a non-empty DB."""
+    """Create the dataset in ``data_dir`` and return the robotics meeting id. Refuses a non-empty DB."""
     config.set_data_dir(data_dir)
     database.init_db()
     db = database.new_session()
@@ -91,7 +173,7 @@ def seed(data_dir: Path) -> str:
             raise SystemExit(f"{data_dir} already has data; seed an empty data dir.")
 
         now = datetime.now(UTC).replace(microsecond=0)
-        org = Organization(name="Robotics Club", slug="robotics-club")
+        org = Organization(name="Demo workspace", slug="demo")
         db.add(org)
         db.flush()
         users = {name: User(org_id=org.id, email=email, full_name=name) for name, email in PEOPLE}
@@ -190,6 +272,8 @@ def seed(data_dir: Path) -> str:
                 ),
             ]
         )
+        for name in FIXTURES:
+            _seed_fixture(db, org, users, data_dir, name)
         db.commit()
         return meeting.id
     finally:

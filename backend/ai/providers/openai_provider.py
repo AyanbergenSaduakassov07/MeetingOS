@@ -300,8 +300,12 @@ class OpenAIProvider(LLMProvider):
 
             response = await retry_with_backoff(_call, description="openai.embed")
             # The API documents order preservation, but sorting by index is
-            # cheap and makes that guarantee local rather than assumed.
-            ordered = sorted(response.data, key=lambda item: item.index)
+            # cheap and makes that guarantee local rather than assumed. Some
+            # OpenAI-wire services (Gemini) omit the index; keep their order.
+            if any(item.index is None for item in response.data):
+                ordered = response.data
+            else:
+                ordered = sorted(response.data, key=lambda item: item.index)
             vectors.extend(item.embedding for item in ordered)
 
         return vectors

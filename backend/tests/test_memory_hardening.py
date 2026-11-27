@@ -169,3 +169,22 @@ def test_an_unscoped_corpus_search_raises_rather_than_searching_everything(data_
     with pytest.raises(ValueError, match="org_id") as caught:
         asyncio.run(search_corpus("anything", db=db))
     assert "across_all_orgs" in str(caught.value), "the error must say how to do it on purpose"
+
+
+@pytest.mark.parametrize(
+    ("indexes", "expected"),
+    [([1, 0], [[0.0], [1.0]]), ([None, None], [[1.0], [0.0]])],  # None: Gemini's OpenAI-compatible API
+)
+def test_embed_orders_by_index_and_keeps_order_when_index_missing(indexes, expected):
+    import asyncio
+    from types import SimpleNamespace
+
+    data = [SimpleNamespace(index=i, embedding=[float(v)]) for i, v in zip(indexes, (1, 0), strict=True)]
+
+    class _Embeddings:
+        async def create(self, **_):
+            return SimpleNamespace(data=data)
+
+    provider = OpenAIProvider()
+    provider._client = SimpleNamespace(embeddings=_Embeddings())
+    assert asyncio.run(provider._embed(["a", "b"])) == expected
