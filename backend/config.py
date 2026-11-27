@@ -52,14 +52,15 @@ def to_storage_path(path: str | Path) -> str:
     """Convert a filesystem path to a DB-safe path relative to the data dir."""
     resolved_path = Path(path).resolve()
 
+    # The real data dir wins; the "after data/" guess would turn
+    # data/demo/recordings/x into demo/recordings/x.
+    if resolved_path.is_relative_to(_data_dir):
+        return str(resolved_path.relative_to(_data_dir))
+
     relative_to_any_data_dir = _path_relative_to_any_data_dir(resolved_path)
     if relative_to_any_data_dir is not None:
         return str(relative_to_any_data_dir)
-
-    try:
-        return str(resolved_path.relative_to(_data_dir))
-    except ValueError:
-        return str(resolved_path)
+    return str(resolved_path)
 
 
 def resolve_storage_path(path: str | Path | None) -> Path | None:
