@@ -4,6 +4,7 @@ import {
   Check,
   ChevronsLeft,
   ClipboardCheck,
+  FileText,
   FileUp,
   Gavel,
   Globe,
@@ -63,6 +64,7 @@ const NEW_ITEMS: NavItem[] = [
   { to: '/meetings', icon: Upload, labelKey: 'nav.newMeeting' },
   { to: '/live', icon: Radio, labelKey: 'nav.newLive' },
   { to: '/library', icon: FileUp, labelKey: 'nav.newDocument' },
+  { to: '/brief', icon: FileText, labelKey: 'nav.prepareBrief' },
 ];
 
 const rowClass =

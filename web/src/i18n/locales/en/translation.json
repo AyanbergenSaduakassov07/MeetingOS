@@ -32,6 +32,7 @@
     "newMeeting": "Upload recording",
     "newLive": "Start live captions",
     "newDocument": "Add document",
+    "prepareBrief": "Prepare brief",
     "search": "Search",
     "hideSidebar": "Hide sidebar",
     "showSidebar": "Show sidebar",
@@ -437,6 +438,36 @@
     "meetings": "Meetings",
     "languages": "Interface language",
     "empty": "No results"
+  },
+  "brief": {
+    "attendees": "Attendees",
+    "project": "Project",
+    "writeSummary": "Write a summary",
+    "prepare": "Prepare",
+    "preparing": "Preparing…",
+    "contextRequired": "Select at least one attendee, enter a project, or do both.",
+    "prepareFailed": "Could not prepare the brief. Try again.",
+    "peopleLoading": "Loading attendees…",
+    "peopleFailed": "Could not load attendees.",
+    "peopleEmpty": "No attendees available.",
+    "result": "Meeting brief",
+    "overdue": "Overdue",
+    "due": "Due {{date}}",
+    "sourceUnavailable": "Source meeting unavailable",
+    "sections": {
+      "open_commitments": {
+        "title": "Open commitments",
+        "empty": "No open commitments."
+      },
+      "unresolved_decisions": {
+        "title": "Unresolved decisions",
+        "empty": "No unresolved decisions."
+      },
+      "recent_changes": {
+        "title": "Recent changes",
+        "empty": "No recent changes."
+      }
+    }
   },
   "decisionRecord": {
     "current": "Current",

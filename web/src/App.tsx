@@ -16,6 +16,7 @@ import { MeetingDetail } from './routes/MeetingDetail';
 import { MeetingsList } from './routes/MeetingsList';
 import { OrgCopilot } from './routes/OrgCopilot';
 import { PersonRecord } from './routes/PersonRecord';
+import { PrepareBrief } from './routes/PrepareBrief';
 import { PrivacySettings } from './routes/PrivacySettings';
 import { Register } from './routes/Register';
 import { LanguageSettings, SettingsLayout } from './routes/Settings';
@@ -127,6 +128,7 @@ function Shell() {
               <Route path="privacy" element={<PrivacySettings />} />
             </Route>
             <Route path="/copilot" element={<OrgCopilot />} />
+            <Route path="/brief" element={<PrepareBrief />} />
             <Route path="/library" element={<Library />} />
             <Route path="/live" element={<LiveHost />} />
             <Route path="/meetings" element={<MeetingsList />} />

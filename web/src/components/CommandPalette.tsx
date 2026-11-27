@@ -41,6 +41,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
 
   const pages: Command[] = [
     ...NAV_GROUPS.flatMap((g) => g.items),
+    { to: '/brief', icon: FileText, labelKey: 'nav.prepareBrief' },
     { to: '/quality', icon: Search, labelKey: 'register.quality' },
     { to: '/settings/language', icon: Globe, labelKey: 'settings.language' },
     { to: '/settings/privacy', icon: Search, labelKey: 'settings.privacy' },
