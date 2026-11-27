@@ -13,6 +13,9 @@
     "unknownError": "Something went wrong",
     "details": "Details"
   },
+  "offline": {
+    "message": "You are offline. Changes and new data will load when the connection returns."
+  },
   "nav": {
     "brand": "MeetingOS",
     "meetings": "Meetings",

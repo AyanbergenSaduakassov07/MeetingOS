@@ -1,12 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import {
-  AlertCircle,
-  AlertTriangle,
-  ChevronRight,
-  Loader2,
-  MessageSquare,
-  PanelRight,
-} from 'lucide-react';
+import { AlertCircle, AlertTriangle, ChevronRight, MessageSquare, PanelRight } from 'lucide-react';
 import { type ReactNode, type RefObject, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router-dom';
@@ -17,6 +10,7 @@ import { MeetingRecordPane, useRecordPane } from '@/components/MeetingRecordPane
 import { PlayerBar } from '@/components/PlayerBar';
 import { MINUTES_LANGUAGES, MinutesDialog, SummaryPanel } from '@/components/SummaryPanel';
 import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
 import { languageName } from '@/i18n';
 import {
   ApiError,
@@ -573,11 +567,23 @@ export function MeetingDetail({ showOutline }: { showOutline: boolean }) {
 
   if (meeting.isLoading) {
     return (
-      <StateCard
-        testId="state-loading"
-        icon={<Loader2 aria-hidden="true" className="size-6 animate-spin text-muted-foreground" />}
-        title={t('common.loading')}
-      />
+      <div
+        aria-busy="true"
+        className="mx-auto max-w-4xl px-4 py-5 sm:px-8"
+        data-testid="state-loading"
+      >
+        <span className="sr-only">{t('common.loading')}</span>
+        <div className="border-b border-border pb-5">
+          <Skeleton className="h-4 w-28" />
+          <Skeleton className="mt-2 h-9 w-3/4 max-w-md" />
+          <Skeleton className="mt-3 h-5 w-64 max-w-full" />
+        </div>
+        <div className="space-y-3 py-5">
+          <Skeleton className="h-6 w-32" />
+          <Skeleton className="h-24" />
+          <Skeleton className="h-16" />
+        </div>
+      </div>
     );
   }
   if (meeting.isError || !meeting.data) {

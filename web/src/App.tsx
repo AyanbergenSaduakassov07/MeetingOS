@@ -1,5 +1,5 @@
 import { ChevronsRight } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useSyncExternalStore } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
@@ -81,9 +81,19 @@ function useShellShortcuts() {
   return { sidebarHidden, setSidebarHidden, paletteOpen, setPaletteOpen };
 }
 
+function subscribeToOnlineStatus(callback: () => void) {
+  window.addEventListener('online', callback);
+  window.addEventListener('offline', callback);
+  return () => {
+    window.removeEventListener('online', callback);
+    window.removeEventListener('offline', callback);
+  };
+}
+
 function Shell() {
   const { t } = useTranslation();
   const { sidebarHidden, setSidebarHidden, paletteOpen, setPaletteOpen } = useShellShortcuts();
+  const online = useSyncExternalStore(subscribeToOnlineStatus, () => navigator.onLine);
 
   return (
     <AuthGate>
@@ -110,41 +120,58 @@ function Shell() {
           <Sidebar onHide={() => setSidebarHidden(true)} onSearch={() => setPaletteOpen(true)} />
         )}
 
-        {/* The shell owns the viewport height; pages use h-full, never h-dvh. */}
-        <main
-          id="main"
-          tabIndex={-1}
-          // Phones: room for the floating show-sidebar button so it never covers a title.
-          className={cn('min-h-0 min-w-0 flex-1 overflow-y-auto', sidebarHidden && 'max-md:pt-12')}
-        >
-          <Routes>
-            <Route path="/" element={<Navigate to="/dashboard" replace />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/follow-ups" element={<Commitments />} />
-            <Route path="/commitments" element={<LegacyCommitments />} />
-            <Route path="/people/:personId" element={<PersonRecord />} />
-            <Route path="/people/:personId/commitments" element={<PersonRecord />} />
-            <Route path="/decisions" element={<Register kind="decisions" />} />
-            <Route path="/decisions/:decisionId" element={<DecisionRecord />} />
-            <Route path="/risks" element={<Register kind="risks" />} />
-            <Route path="/quality" element={<Register kind="quality" />} />
-            <Route path="/settings" element={<SettingsLayout />}>
-              <Route index element={<Navigate to="language" replace />} />
-              <Route path="language" element={<LanguageSettings />} />
-              <Route path="privacy" element={<PrivacySettings />} />
-            </Route>
-            <Route path="/copilot" element={<OrgCopilot />} />
-            <Route path="/brief" element={<PrepareBrief />} />
-            <Route path="/library" element={<Library />} />
-            <Route path="/live" element={<LiveHost />} />
-            <Route path="/meetings" element={<MeetingsList />} />
-            <Route
-              path="/meetings/:meetingId"
-              element={<MeetingDetail showOutline={!sidebarHidden} />}
-            />
-            <Route path="*" element={<Navigate to="/dashboard" replace />} />
-          </Routes>
-        </main>
+        <div className="flex min-w-0 flex-1 flex-col">
+          {/* biome-ignore lint/a11y/useSemanticElements: This live region reports network state. */}
+          <div
+            role="status"
+            data-testid={online ? undefined : 'offline-banner'}
+            className={cn(
+              !online &&
+                'flex min-h-12 shrink-0 items-center bg-warn-tint px-4 py-3 text-sm text-warn',
+              !online && sidebarHidden && 'pl-14',
+            )}
+          >
+            {!online && t('offline.message')}
+          </div>
+          {/* The shell owns the viewport height; pages use h-full, never h-dvh. */}
+          <main
+            id="main"
+            tabIndex={-1}
+            // The offline banner already clears the floating show-sidebar button.
+            className={cn(
+              'min-h-0 flex-1 overflow-y-auto',
+              sidebarHidden && online && 'max-md:pt-12',
+            )}
+          >
+            <Routes>
+              <Route path="/" element={<Navigate to="/dashboard" replace />} />
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/follow-ups" element={<Commitments />} />
+              <Route path="/commitments" element={<LegacyCommitments />} />
+              <Route path="/people/:personId" element={<PersonRecord />} />
+              <Route path="/people/:personId/commitments" element={<PersonRecord />} />
+              <Route path="/decisions" element={<Register kind="decisions" />} />
+              <Route path="/decisions/:decisionId" element={<DecisionRecord />} />
+              <Route path="/risks" element={<Register kind="risks" />} />
+              <Route path="/quality" element={<Register kind="quality" />} />
+              <Route path="/settings" element={<SettingsLayout />}>
+                <Route index element={<Navigate to="language" replace />} />
+                <Route path="language" element={<LanguageSettings />} />
+                <Route path="privacy" element={<PrivacySettings />} />
+              </Route>
+              <Route path="/copilot" element={<OrgCopilot />} />
+              <Route path="/brief" element={<PrepareBrief />} />
+              <Route path="/library" element={<Library />} />
+              <Route path="/live" element={<LiveHost />} />
+              <Route path="/meetings" element={<MeetingsList />} />
+              <Route
+                path="/meetings/:meetingId"
+                element={<MeetingDetail showOutline={!sidebarHidden} />}
+              />
+              <Route path="*" element={<Navigate to="/dashboard" replace />} />
+            </Routes>
+          </main>
+        </div>
 
         <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
         <Toaster />

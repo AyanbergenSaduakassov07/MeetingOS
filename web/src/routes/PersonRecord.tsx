@@ -1,9 +1,9 @@
 import { useQuery } from '@tanstack/react-query';
-import { Loader2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router-dom';
 import { ErrorNotice } from '@/components/ErrorNotice';
 import { FollowUpList } from '@/components/FollowUpList';
+import { Skeleton } from '@/components/ui/skeleton';
 import { api, type PersonCommitments } from '@/lib/api';
 import { formatCompletionRate } from '@/lib/followups';
 
@@ -120,10 +120,16 @@ export function PersonRecord() {
         </Link>
       </header>
       {history.isLoading && (
-        <output className="mt-6 flex items-center gap-2 text-sm text-muted-foreground">
-          <Loader2 aria-hidden="true" className="size-4 animate-spin" />
-          {t('common.loading')}
-        </output>
+        <div aria-busy="true" className="mt-6 space-y-3">
+          <span className="sr-only">{t('common.loading')}</span>
+          <Skeleton className="h-5 w-32" />
+          <div className="grid grid-cols-2 gap-2 sm:gap-3">
+            <Skeleton className="h-20" />
+            <Skeleton className="h-20" />
+          </div>
+          <Skeleton className="h-24" />
+          <Skeleton className="h-24" />
+        </div>
       )}
       {history.isError && (
         <ErrorNotice

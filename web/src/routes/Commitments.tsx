@@ -1,11 +1,11 @@
 import { useQuery } from '@tanstack/react-query';
-import { Loader2 } from 'lucide-react';
 import { useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useSearchParams } from 'react-router-dom';
 import { ErrorNotice } from '@/components/ErrorNotice';
 import { FollowUpList } from '@/components/FollowUpList';
 import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { api, type CommitmentItem } from '@/lib/api';
 import { completionRate, formatCompletionRate } from '@/lib/followups';
@@ -214,10 +214,13 @@ export function Commitments() {
             />
           )}
           {results.isLoading && (
-            <output className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Loader2 aria-hidden="true" className="size-4 animate-spin" />
-              {t('common.loading')}
-            </output>
+            <div aria-busy="true" className="space-y-2">
+              <span className="sr-only">{t('common.loading')}</span>
+              <Skeleton className="h-5 w-28" />
+              {[1, 2, 3].map((row) => (
+                <Skeleton key={row} className="h-24" />
+              ))}
+            </div>
           )}
           {results.isError && (
             <ErrorNotice
