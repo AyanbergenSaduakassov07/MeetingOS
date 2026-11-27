@@ -1,84 +1,78 @@
-"""Stub: OpenAI-compatible endpoint owned by the customer.
+"""OpenAI-wire endpoint the operator chooses: OpenRouter, vLLM, Ollama, TGI, Azure OpenAI.
 
-Not implemented for v0.1.  This exists because the enterprise ask — "our
-transcripts never leave our network" — is answered by pointing MeetingOS at a
-self-hosted inference server (vLLM, Ollama, TGI, Azure OpenAI) that speaks the
-OpenAI wire format.
-
-Deliberately a separate class rather than ``OpenAIProvider`` with a different
-``base_url``.  The wire format matches; the operating assumptions do not:
+A subclass of ``OpenAIProvider`` that differs where these servers differ:
 
 - No credential is required — many self-hosted deployments are unauthenticated
-  behind a VPC — so ``is_configured`` must key off the URL, not an API key.
-- Strict ``json_schema`` support is uneven across servers.  This provider has
-  to detect support and fall back to prompt-and-repair, which is exactly the
-  branch ``OpenAIProvider`` should not carry.
-- Embedding models and dimensions are whatever the customer deployed, so
-  ``embedding_dim`` cannot be defaulted and must be probed or configured.
-
-Implement by subclassing ``OpenAIProvider`` and overriding ``is_configured``,
-``extract``, and ``embed`` once a real endpoint exists to test against.
+  behind a VPC — so ``is_configured`` keys off the URL, not an API key.
+- Strict ``json_schema`` support is uneven, so ``extract`` sends the schema in
+  the prompt and parses the first JSON object out of the reply (fenced or not).
+  Pydantic validation still rejects anything that does not fit.
+- Embedding models are whatever the operator deployed, so embeddings are off
+  unless ``OPENAI_COMPATIBLE_EMBEDDING_MODEL`` is set; ``AI_EMBEDDING_PROVIDER``
+  can route them elsewhere.
 """
 
 from __future__ import annotations
 
+import json
 import os
-from typing import TypeVar
+from typing import Any
 
 from pydantic import BaseModel
 
 from ...config import validate_inference_base_url
-from ..base import Completion, LLMProvider, ProviderConfig, ProviderError
+from ..base import ProviderConfig, ProviderError
+from .openai_provider import DEFAULT_MAX_TOKENS, OpenAIProvider
 
-TModel = TypeVar("TModel", bound=BaseModel)
-
-NOT_IMPLEMENTED = "The openai_compatible provider is not implemented yet (planned post-v0.1)."
+JSON_INSTRUCTION = "Reply with one JSON object and nothing else. It must validate against this JSON Schema:\n{schema}"
 
 
 def default_config() -> ProviderConfig:
-    """Config for a customer-hosted OpenAI-compatible endpoint."""
+    """Config for an operator-chosen OpenAI-compatible endpoint."""
+    embedding_model = os.environ.get("OPENAI_COMPATIBLE_EMBEDDING_MODEL") or None
     return ProviderConfig(
         name="openai_compatible",
         model=os.environ.get("OPENAI_COMPATIBLE_MODEL", ""),
         api_key_env="OPENAI_COMPATIBLE_API_KEY",
         base_url=validate_inference_base_url(os.environ.get("OPENAI_COMPATIBLE_BASE_URL"), provider="openai_compatible")
         or None,
-        embedding_model=os.environ.get("OPENAI_COMPATIBLE_EMBEDDING_MODEL") or None,
-        supports_embeddings=False,
+        embedding_model=embedding_model,
+        max_tokens=int(os.environ.get("OPENAI_COMPATIBLE_MAX_TOKENS", DEFAULT_MAX_TOKENS)),
+        supports_embeddings=embedding_model is not None,
         supports_native_json_schema=False,
     )
 
 
-class OpenAICompatibleProvider(LLMProvider):
-    """Placeholder so the orchestrator can name this provider before it exists."""
+class OpenAICompatibleProvider(OpenAIProvider):
+    """``OpenAIProvider`` without strict structured outputs or a mandatory key."""
 
     def __init__(self, config: ProviderConfig | None = None) -> None:
         super().__init__(config or default_config())
 
     def is_configured(self) -> bool:
-        # Keyed off the endpoint, not a key: these deployments are commonly
-        # unauthenticated inside a private network.
         return bool(self.config.base_url)
 
-    async def generate(
-        self,
-        prompt: str,
-        *,
-        system: str | None = None,
-        max_tokens: int | None = None,
-        temperature: float | None = None,
-    ) -> Completion:
-        raise ProviderError(NOT_IMPLEMENTED)
+    def _default_host(self) -> str:
+        return "localhost"
 
-    async def extract(
-        self,
-        prompt: str,
-        schema: type[TModel],
-        *,
-        system: str | None = None,
-        max_tokens: int | None = None,
-    ) -> TModel:
-        raise ProviderError(NOT_IMPLEMENTED)
+    def _extract_request(
+        self, prompt: str, schema: type[BaseModel], system: str | None
+    ) -> tuple[list[dict[str, str]], dict[str, Any]]:
+        instruction = JSON_INSTRUCTION.format(schema=json.dumps(schema.model_json_schema()))
+        return self._messages(prompt, f"{system}\n\n{instruction}" if system else instruction), {}
+
+    @staticmethod
+    def _parse_json(content: str) -> Any:
+        # Models wrap JSON in prose or ``` fences; take the outermost object.
+        start, end = content.find("{"), content.rfind("}")
+        if start == -1 or end < start:
+            raise json.JSONDecodeError("no JSON object in reply", content, 0)
+        return json.loads(content[start : end + 1])
 
     async def embed(self, texts: list[str]) -> list[list[float]]:
-        raise ProviderError(NOT_IMPLEMENTED)
+        if not self.config.embedding_model:
+            raise ProviderError(
+                "openai_compatible has no embedding model: set OPENAI_COMPATIBLE_EMBEDDING_MODEL "
+                "or route embeddings with AI_EMBEDDING_PROVIDER."
+            )
+        return await super().embed(texts)

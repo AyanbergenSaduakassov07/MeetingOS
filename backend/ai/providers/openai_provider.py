@@ -103,7 +103,8 @@ class OpenAIProvider(LLMProvider):
             raise ProviderError(f"{self.config.api_key_env} is not set.")
 
         self._client = AsyncOpenAI(
-            api_key=os.environ[self.config.api_key_env],
+            # Unauthenticated self-hosted endpoints still need a non-empty key for the SDK.
+            api_key=os.environ.get(self.config.api_key_env) or "unused",
             base_url=self.config.base_url,
             timeout=self.config.timeout_seconds,
         )
@@ -122,6 +123,20 @@ class OpenAIProvider(LLMProvider):
             status = exc.status_code
             return ProviderError(f"OpenAI API error {status}: {exc}", retryable=status >= 500, status_code=status)
         return ProviderError(f"OpenAI call failed: {exc}")
+
+    def _extract_request(
+        self, prompt: str, schema: type[BaseModel], system: str | None
+    ) -> tuple[list[dict[str, str]], dict[str, Any]]:
+        """Messages plus extra create() kwargs for a structured extraction."""
+        response_format = {
+            "type": "json_schema",
+            "json_schema": {"name": schema.__name__, "schema": _strict_schema(schema), "strict": True},
+        }
+        return self._messages(prompt, system), {"response_format": response_format}
+
+    @staticmethod
+    def _parse_json(content: str) -> Any:
+        return json.loads(content)
 
     def _messages(self, prompt: str, system: str | None) -> list[dict[str, str]]:
         messages: list[dict[str, str]] = []
@@ -227,22 +242,15 @@ class OpenAIProvider(LLMProvider):
         max_tokens: int | None = None,
     ) -> TModel:
         client = self._get_client()
-        response_format = {
-            "type": "json_schema",
-            "json_schema": {
-                "name": schema.__name__,
-                "schema": _strict_schema(schema),
-                "strict": True,
-            },
-        }
+        messages, extra = self._extract_request(prompt, schema, system)
 
         async def _call():
             try:
                 return await client.chat.completions.create(
                     model=self.config.model,
-                    messages=self._messages(prompt, system),
+                    messages=messages,
                     max_tokens=self.resolved_max_tokens(max_tokens),
-                    response_format=response_format,
+                    **extra,
                 )
             except Exception as exc:
                 raise self._wrap_error(exc) from exc
@@ -257,7 +265,7 @@ class OpenAIProvider(LLMProvider):
 
         content = choice.message.content or ""
         try:
-            payload = json.loads(content)
+            payload = self._parse_json(content)
         except json.JSONDecodeError as exc:
             raise ProviderError(f"Extraction returned non-JSON content: {exc}") from exc
 
