@@ -3,6 +3,7 @@ import { FileText, Loader2, Lock, Upload } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ErrorNotice } from '@/components/ErrorNotice';
+import { Skeleton } from '@/components/ui/skeleton';
 import { api } from '@/lib/api';
 
 const ACCEPT = '.pdf,.txt,.md,.docx,.pptx';
@@ -94,10 +95,12 @@ export function Library() {
       </form>
 
       {documents.isLoading ? (
-        <p className="mt-8 flex items-center gap-2 text-sm text-muted-foreground">
-          <Loader2 aria-hidden="true" className="size-4 animate-spin" />
-          {t('common.loading')}
-        </p>
+        <div aria-busy="true" className="mt-6 space-y-2">
+          <span className="sr-only">{t('common.loading')}</span>
+          {[1, 2, 3].map((row) => (
+            <Skeleton key={row} className="h-11" />
+          ))}
+        </div>
       ) : documents.isError ? (
         <ErrorNotice
           className="mt-8"

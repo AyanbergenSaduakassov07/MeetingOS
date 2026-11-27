@@ -1,8 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
-import { Loader2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router-dom';
 import { ErrorNotice } from '@/components/ErrorNotice';
+import { Skeleton } from '@/components/ui/skeleton';
 import { api, type DecisionConflict, type DecisionTimelineEntry } from '@/lib/api';
 import { formatTimestamp } from '@/lib/playback';
 import { cn } from '@/lib/utils';
@@ -180,10 +180,16 @@ export function DecisionRecord() {
       </nav>
 
       {timeline.isLoading && (
-        <p className="mt-8 flex items-center gap-2 text-sm text-muted-foreground">
-          <Loader2 aria-hidden="true" className="size-4 animate-spin" />
-          {t('common.loading')}
-        </p>
+        <div aria-busy="true" className="mt-2">
+          <span className="sr-only">{t('common.loading')}</span>
+          <Skeleton className="h-9 w-3/4 max-w-md" />
+          <Skeleton className="mt-3 h-5 w-40" />
+          <div className="mt-8 space-y-3 border-l border-border pl-5">
+            {[1, 2, 3].map((row) => (
+              <Skeleton key={row} className="h-14" />
+            ))}
+          </div>
+        </div>
       )}
       {(timeline.isError || (timeline.isSuccess && !current)) && (
         <ErrorNotice
@@ -223,7 +229,11 @@ export function DecisionRecord() {
                 {t('decisionRecord.conflictsFailed')}
               </p>
             ) : conflicts.isLoading ? (
-              <Loader2 aria-label={t('common.loading')} className="mt-3 size-4 animate-spin" />
+              <div aria-busy="true" className="mt-3 grid gap-3 md:grid-cols-2">
+                <span className="sr-only">{t('common.loading')}</span>
+                <Skeleton className="h-24" />
+                <Skeleton className="h-24" />
+              </div>
             ) : (
               <Conflicts conflicts={conflicts.data?.conflicts ?? []} />
             )}

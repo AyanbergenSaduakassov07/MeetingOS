@@ -1,5 +1,4 @@
 import { useQuery } from '@tanstack/react-query';
-import { Loader2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { ErrorNotice } from '@/components/ErrorNotice';
@@ -11,6 +10,7 @@ import {
 } from '@/components/HomeBriefing';
 import { QualityIndicator } from '@/components/QualityIndicator';
 import { StatCard } from '@/components/StatCard';
+import { Skeleton } from '@/components/ui/skeleton';
 import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
 
@@ -31,10 +31,25 @@ export function Dashboard() {
 
   if (dashboard.isLoading || meetings.isLoading) {
     return (
-      <output className="mx-auto mt-16 flex max-w-md flex-col items-center gap-3 rounded-lg border border-border bg-card p-8 text-center">
-        <Loader2 aria-hidden="true" className="size-6 animate-spin text-muted-foreground" />
-        <h2 className="font-display text-lg font-bold">{t('common.loading')}</h2>
-      </output>
+      <div aria-busy="true" className="mx-auto max-w-6xl px-6 py-8">
+        <span className="sr-only">{t('common.loading')}</span>
+        <Skeleton className="h-9 w-32" />
+        <Skeleton className="mt-1 h-4 w-56 max-w-full" />
+        <div className="mt-6 grid gap-6 lg:grid-cols-[2fr_1fr]">
+          <div className="space-y-6">
+            <Skeleton className="h-24" />
+            <div className="space-y-2">
+              {[1, 2, 3].map((row) => (
+                <Skeleton key={row} className="h-11" />
+              ))}
+            </div>
+          </div>
+          <div className="space-y-6">
+            <Skeleton className="h-24" />
+            <Skeleton className="h-28" />
+          </div>
+        </div>
+      </div>
     );
   }
 

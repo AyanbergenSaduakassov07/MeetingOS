@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from 'react-router-dom';
 import { ConsentDialog } from '@/components/ConsentDialog';
 import { ErrorNotice } from '@/components/ErrorNotice';
+import { Skeleton } from '@/components/ui/skeleton';
 import { api } from '@/lib/api';
 import { formatTimestamp } from '@/lib/playback';
 import { cn } from '@/lib/utils';
@@ -50,6 +51,8 @@ export function MeetingsList() {
           <input
             ref={fileRef}
             type="file"
+            aria-label={t('nav.upload')}
+            tabIndex={-1}
             accept="audio/*,.wav,.mp3,.m4a,.ogg,.flac,.webm"
             className="sr-only"
             data-testid="upload-input"
@@ -96,10 +99,6 @@ export function MeetingsList() {
         </p>
       )}
 
-      {meetings.isLoading && (
-        <p className="mt-8 text-sm text-muted-foreground">{t('common.loading')}</p>
-      )}
-
       {meetings.isError && (
         <ErrorNotice
           className="mt-8"
@@ -116,7 +115,29 @@ export function MeetingsList() {
         </div>
       )}
 
-      <ul className="mt-6 space-y-2" data-testid="meeting-list">
+      <ul
+        aria-busy={meetings.isLoading || undefined}
+        className="mt-6 space-y-2"
+        data-testid="meeting-list"
+      >
+        {meetings.isLoading && (
+          <>
+            <li className="sr-only">{t('common.loading')}</li>
+            {[1, 2, 3].map((row) => (
+              <li
+                key={row}
+                aria-hidden="true"
+                className="flex min-h-16 items-center gap-4 rounded-lg border border-border bg-card px-4 py-3"
+              >
+                <div className="min-w-0 flex-1 space-y-1">
+                  <Skeleton className="h-4 w-3/4 max-w-64" />
+                  <Skeleton className="h-3 w-1/2 max-w-32" />
+                </div>
+                <Skeleton className="h-6 w-16 rounded-full" />
+              </li>
+            ))}
+          </>
+        )}
         {(meetings.data ?? []).map((meeting) => (
           <li key={meeting.id}>
             <Link

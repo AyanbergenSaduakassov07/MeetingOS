@@ -1,8 +1,8 @@
-import { Loader2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Link, useSearchParams } from 'react-router-dom';
 import { ErrorNotice } from '@/components/ErrorNotice';
 import { ItemCard, type ItemKind } from '@/components/ItemCard';
+import { Skeleton } from '@/components/ui/skeleton';
 import type { ExtractedItem, MeetingIntelligence, MeetingSummary } from '@/lib/api';
 import { formatTimestamp } from '@/lib/playback';
 import { useOrgIntelligence } from '@/lib/register';
@@ -220,10 +220,13 @@ export function Register({ kind }: { kind: RegisterKind }) {
       )}
 
       {org.isLoading ? (
-        <p className="mt-8 flex items-center gap-2 text-sm text-muted-foreground">
-          <Loader2 aria-hidden="true" className="size-4 animate-spin" />
-          {t('common.loading')}
-        </p>
+        <div aria-busy="true" className="mt-6 space-y-2">
+          <span className="sr-only">{t('common.loading')}</span>
+          <Skeleton className="h-4 w-28" />
+          {[1, 2, 3].map((row) => (
+            <Skeleton key={row} className={kind === 'quality' ? 'h-24' : 'h-10'} />
+          ))}
+        </div>
       ) : (
         !org.isError && (
           <>
