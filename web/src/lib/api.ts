@@ -452,6 +452,42 @@ export interface Minutes {
   summary: string | null;
 }
 
+export interface PrepareRequest {
+  attendee_ids: string[];
+  project: string | null;
+  summarise: boolean;
+}
+
+export interface BriefItemOut {
+  kind: string;
+  text: string;
+  detail: string | null;
+  owner_name: string | null;
+  due_date: string | null;
+  overdue: boolean;
+  days_overdue: number | null;
+  status: string | null;
+  meeting_id: string | null;
+  meeting_title: string | null;
+  evidence_id: string | null;
+  start_ms: number | null;
+}
+
+export interface BriefOut {
+  project: string | null;
+  attendee_ids: string[];
+  attendee_names: string[];
+  open_commitments: BriefItemOut[];
+  unresolved_decisions: BriefItemOut[];
+  recent_changes: BriefItemOut[];
+  last_related_meeting_id: string | null;
+  last_related_meeting_title: string | null;
+  item_count: number;
+  is_empty: boolean;
+  notes: string[];
+  summary: string | null;
+}
+
 export const api = {
   getSession: () => get<Session>('/api/session'),
   login: (apiKey: string) => sendJson<void>('POST', '/api/session', { api_key: apiKey }),
@@ -516,4 +552,6 @@ export const api = {
     if (language) form.append('language', language);
     return request<MeetingDetail>('/api/meetings/upload', { method: 'POST', body: form });
   },
+  prepareBrief: (payload: PrepareRequest) =>
+    sendJson<BriefOut>('POST', '/api/meetings/prepare', payload),
 };
