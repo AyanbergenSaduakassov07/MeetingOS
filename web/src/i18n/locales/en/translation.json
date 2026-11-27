@@ -370,7 +370,19 @@
     "empty": "Nothing matches these filters.",
     "loadFailed": "Could not load the register.",
     "partial": "{{count}} meeting(s) could not be loaded, so this list may be incomplete.",
-    "all": "All"
+    "all": "All",
+    "severity": "Severity",
+    "risk": "Risk",
+    "decision": "Decision",
+    "status": "Status",
+    "raisedIn": "Raised in",
+    "sev": {
+      "critical": "Critical",
+      "high": "High",
+      "medium": "Medium",
+      "low": "Low",
+      "unknown": "—"
+    }
   },
   "settings": {
     "title": "Settings",
@@ -391,5 +403,37 @@
     "meetings": "Meetings",
     "languages": "Interface language",
     "empty": "No results"
+  },
+  "decisionRecord": {
+    "current": "Current",
+    "before": "Earlier",
+    "after": "Later",
+    "noConflicts": "No conflicts with earlier meetings.",
+    "chain": "Chain",
+    "conflicts": "Conflicts",
+    "loadFailed": "Could not load this decision.",
+    "conflictsFailed": "Could not check conflicts.",
+    "state": {
+      "proposed": "Pending",
+      "discussed": "Discussed",
+      "agreed": "Approved",
+      "revisited": "Revisited",
+      "reversed": "Reversed",
+      "superseded": "Superseded",
+      "consistent": "Consistent",
+      "refined": "Refined",
+      "contradicted": "Contradicted",
+      "open": "Open",
+      "closed": "Closed",
+      "mitigated": "Mitigated"
+    },
+    "event": {
+      "proposed": "Proposed",
+      "discussed": "Discussed",
+      "agreed": "Agreed",
+      "revisited": "Revisited",
+      "reversed": "Reversed",
+      "superseded": "Superseded"
+    }
   }
 }

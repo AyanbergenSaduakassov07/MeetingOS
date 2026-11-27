@@ -8,6 +8,7 @@ import { Sidebar } from './components/Sidebar';
 import { Toaster } from './components/ui/toaster';
 import { Commitments } from './routes/Commitments';
 import { Dashboard } from './routes/Dashboard';
+import { DecisionRecord } from './routes/DecisionRecord';
 import { Library } from './routes/Library';
 import { LiveHost } from './routes/LiveHost';
 import { LiveViewer } from './routes/LiveViewer';
@@ -109,6 +110,7 @@ function Shell() {
             <Route path="/commitments" element={<Commitments />} />
             <Route path="/people/:personId/commitments" element={<Commitments />} />
             <Route path="/decisions" element={<Register kind="decisions" />} />
+            <Route path="/decisions/:decisionId" element={<DecisionRecord />} />
             <Route path="/risks" element={<Register kind="risks" />} />
             <Route path="/quality" element={<Register kind="quality" />} />
             <Route path="/settings" element={<SettingsLayout />}>

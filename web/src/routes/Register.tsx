@@ -2,9 +2,11 @@ import { Loader2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Link, useSearchParams } from 'react-router-dom';
 import { ItemCard, type ItemKind } from '@/components/ItemCard';
-import type { ExtractedItem, MeetingIntelligence } from '@/lib/api';
+import type { ExtractedItem, MeetingIntelligence, MeetingSummary } from '@/lib/api';
+import { formatTimestamp } from '@/lib/playback';
 import { useOrgIntelligence } from '@/lib/register';
 import { cn } from '@/lib/utils';
+import { StatusChip } from './DecisionRecord';
 
 export type RegisterKind = 'decisions' | 'risks' | 'quality';
 
@@ -86,6 +88,95 @@ function QualityFilter({ params }: { params: URLSearchParams }) {
   );
 }
 
+const SEVERITY_STRIPE: Record<string, string> = {
+  critical: 'border-l-destructive',
+  high: 'border-l-destructive',
+  medium: 'border-l-warn',
+  low: 'border-l-border',
+};
+
+type Group = { meeting: MeetingSummary; rows: Row[] };
+
+/** Decisions and risks read as a register table: one row per item, linked to its record or meeting. */
+function RegisterTable({ kind, groups }: { kind: 'decisions' | 'risks'; groups: Group[] }) {
+  const { t } = useTranslation();
+  const th = 'px-3 py-2 text-left font-mono text-[10.5px] font-medium uppercase tracking-wider';
+  return (
+    <div className="mt-6 overflow-x-auto rounded-lg border border-border">
+      <table className="w-full text-sm" data-testid="register-table">
+        <thead className="sticky top-0 bg-muted text-muted-foreground">
+          <tr>
+            {kind === 'risks' && <th className={th}>{t('register.severity')}</th>}
+            <th className={th}>{t(kind === 'risks' ? 'register.risk' : 'register.decision')}</th>
+            {kind === 'decisions' && <th className={th}>{t('register.status')}</th>}
+            <th className={th}>{t('register.raisedIn')}</th>
+            {kind === 'risks' && <th className={th}>{t('register.status')}</th>}
+          </tr>
+        </thead>
+        <tbody>
+          {groups.flatMap(({ meeting, rows }) =>
+            rows.map(({ item }) => (
+              <tr
+                key={item.id}
+                data-testid="register-row"
+                className="border-t border-border align-top"
+              >
+                {kind === 'risks' && (
+                  <td
+                    className={cn(
+                      'border-l-4 px-3 py-2.5 text-xs font-medium',
+                      SEVERITY_STRIPE[item.severity ?? ''] ?? 'border-l-border',
+                    )}
+                  >
+                    {t(`register.sev.${item.severity ?? 'unknown'}`, item.severity ?? '—')}
+                  </td>
+                )}
+                <td className="px-3 py-2.5">
+                  {kind === 'decisions' ? (
+                    <Link
+                      to={`/decisions/${item.id}`}
+                      className="font-medium text-link hover:underline"
+                    >
+                      {item.title}
+                    </Link>
+                  ) : (
+                    <span className="font-medium">{item.title}</span>
+                  )}
+                  {item.supersedes_id && (
+                    <span className="ml-2 text-xs text-muted-foreground">
+                      {t('status.revisited')}
+                    </span>
+                  )}
+                </td>
+                {kind === 'decisions' && (
+                  <td className="px-3 py-2.5">
+                    <StatusChip value={item.status ?? 'proposed'} />
+                  </td>
+                )}
+                <td className="px-3 py-2.5 text-xs text-muted-foreground">
+                  <Link to={`/meetings/${meeting.id}`} className="text-link hover:underline">
+                    {meeting.title}
+                  </Link>
+                  {item.source_start_ms != null && (
+                    <span className="ml-1.5 font-mono">
+                      {formatTimestamp(item.source_start_ms)}
+                    </span>
+                  )}
+                </td>
+                {kind === 'risks' && (
+                  <td className="px-3 py-2.5 text-xs">
+                    {t(`decisionRecord.state.${item.status ?? 'open'}`, item.status ?? 'open')}
+                  </td>
+                )}
+              </tr>
+            )),
+          )}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 /** Cross-meeting list behind a dashboard counter. */
 export function Register({ kind }: { kind: RegisterKind }) {
   const { t } = useTranslation();
@@ -144,6 +235,8 @@ export function Register({ kind }: { kind: RegisterKind }) {
               <p className="mt-6 rounded-lg border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
                 {t('register.empty')}
               </p>
+            ) : kind !== 'quality' ? (
+              <RegisterTable kind={kind} groups={groups} />
             ) : (
               groups.map(({ meeting, rows }) => (
                 <section key={meeting.id} className="mt-6">
