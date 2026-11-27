@@ -4,6 +4,7 @@ import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from 'react-router-dom';
 import { ConsentDialog } from '@/components/ConsentDialog';
+import { ErrorNotice } from '@/components/ErrorNotice';
 import { api } from '@/lib/api';
 import { formatTimestamp } from '@/lib/playback';
 import { cn } from '@/lib/utils';
@@ -100,9 +101,12 @@ export function MeetingsList() {
       )}
 
       {meetings.isError && (
-        <p role="alert" className="mt-8 text-sm text-destructive">
-          {t('meetings.loadFailed')}
-        </p>
+        <ErrorNotice
+          className="mt-8"
+          message={t('meetings.listFailed')}
+          error={meetings.error}
+          onRetry={() => void meetings.refetch()}
+        />
       )}
 
       {meetings.data?.length === 0 && (

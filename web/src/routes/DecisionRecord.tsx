@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Loader2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router-dom';
+import { ErrorNotice } from '@/components/ErrorNotice';
 import { api, type DecisionConflict, type DecisionTimelineEntry } from '@/lib/api';
 import { formatTimestamp } from '@/lib/playback';
 import { cn } from '@/lib/utils';
@@ -185,9 +186,12 @@ export function DecisionRecord() {
         </p>
       )}
       {(timeline.isError || (timeline.isSuccess && !current)) && (
-        <p role="alert" className="mt-8 text-sm text-destructive">
-          {t('decisionRecord.loadFailed')}
-        </p>
+        <ErrorNotice
+          className="mt-8"
+          message={t('decisionRecord.loadFailed')}
+          error={timeline.error}
+          onRetry={() => void timeline.refetch()}
+        />
       )}
 
       {current && (

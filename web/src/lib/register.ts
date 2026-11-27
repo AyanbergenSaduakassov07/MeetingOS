@@ -9,6 +9,7 @@ export interface OrgIntelligence {
   failedCount: number;
   isLoading: boolean;
   isError: boolean;
+  retry: () => void;
 }
 
 /** Meetings created within the last `periodDays` (all of them when null). */
@@ -50,5 +51,6 @@ export function useOrgIntelligence(periodDays: number | null): OrgIntelligence {
     failedCount: results.filter((r) => r.isError).length,
     isLoading: list.isLoading || results.some((r) => r.isLoading),
     isError: list.isError,
+    retry: () => void list.refetch(),
   };
 }

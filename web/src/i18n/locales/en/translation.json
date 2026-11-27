@@ -122,7 +122,8 @@
     "extractionIncomplete": "Some items may be missing",
     "analyzingTitle": "Extracting decisions and action items…",
     "analyzingDetail": "The transcript is ready. Decisions, actions and risks appear here when the language model finishes.",
-    "extractionIncompleteHint": "The transcript is complete."
+    "extractionIncompleteHint": "The transcript is complete.",
+    "listFailed": "Could not load meetings."
   },
   "record": {
     "sections": "Meeting sections",
@@ -339,7 +340,8 @@
     "upload": "Upload",
     "allowed": "PDF, DOCX, PPTX, TXT or Markdown.",
     "notIndexed": "Saved, but not searchable yet: the embedding model is unavailable.",
-    "empty": "No documents yet. Upload one to make it searchable by the copilot."
+    "empty": "No documents yet. Upload one to make it searchable by the copilot.",
+    "listFailed": "Could not load the library."
   },
   "orgCopilot": {
     "title": "Ask across all meetings",
@@ -495,5 +497,8 @@
       "library": "Add a document",
       "libraryHint": "Agendas and reports the copilot can cite next to your meetings."
     }
+  },
+  "errors": {
+    "whatToDo": "Check that the MeetingOS server is running, then try again."
   }
 }

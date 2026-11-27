@@ -1,6 +1,7 @@
 import { Loader2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Link, useSearchParams } from 'react-router-dom';
+import { ErrorNotice } from '@/components/ErrorNotice';
 import { ItemCard, type ItemKind } from '@/components/ItemCard';
 import type { ExtractedItem, MeetingIntelligence, MeetingSummary } from '@/lib/api';
 import { formatTimestamp } from '@/lib/playback';
@@ -210,9 +211,7 @@ export function Register({ kind }: { kind: RegisterKind }) {
       {kind === 'quality' && <QualityFilter params={params} />}
 
       {org.isError && (
-        <p role="alert" className="mt-8 text-sm text-destructive">
-          {t('register.loadFailed')}
-        </p>
+        <ErrorNotice className="mt-8" message={t('register.loadFailed')} onRetry={org.retry} />
       )}
       {org.failedCount > 0 && (
         <p role="alert" className="mt-4 text-sm text-warn">
