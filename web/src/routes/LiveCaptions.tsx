@@ -36,7 +36,7 @@ export function LanguagePicker({
   const { t } = useTranslation();
   return (
     <Select value={value} onValueChange={onChange}>
-      <SelectTrigger id={id} className="w-56">
+      <SelectTrigger id={id} className="w-full sm:w-56">
         <SelectValue />
       </SelectTrigger>
       <SelectContent>

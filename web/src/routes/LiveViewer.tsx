@@ -35,16 +35,20 @@ export function LiveViewer() {
   }
   return (
     <div className="min-h-dvh bg-background text-foreground">
-      <header className="sticky top-0 z-10 flex flex-wrap items-center gap-4 border-b border-border bg-card px-6 py-3">
-        <h1 className="mr-auto text-lg font-semibold">{live.title || t('live.title')}</h1>
+      <header className="sticky top-0 z-10 flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-border bg-card px-4 py-3 sm:px-6">
+        <h1 className="mr-auto min-w-0 break-words font-display text-lg font-semibold">
+          {live.title || t('live.title')}
+        </h1>
         <StatusBadge state={live.state} />
-        <div className="flex items-center gap-2">
-          <Label htmlFor="viewer-lang">{t('live.captionLanguage')}</Label>
+        <div className="flex w-full items-center gap-2 sm:w-auto">
+          <Label htmlFor="viewer-lang" className="shrink-0">
+            {t('live.captionLanguage')}
+          </Label>
           <LanguagePicker id="viewer-lang" value={lang} onChange={setLang} languages={languages} />
         </div>
         <LanguageToggle />
       </header>
-      <main className="mx-auto max-w-3xl px-6 py-8">
+      <main className="mx-auto max-w-3xl px-4 py-6 sm:px-6 sm:py-8">
         {live.state === 'error' ? (
           <p role="alert" className="py-12 text-center text-destructive">
             {live.error ?? t('live.linkInvalid')}
@@ -116,7 +120,7 @@ function Presenter({
 export function StatusBadge({ state }: { state: string }) {
   const { t } = useTranslation();
   const tone =
-    state === 'live' ? 'bg-red-500' : state === 'ended' ? 'bg-muted-foreground' : 'bg-amber-500';
+    state === 'live' ? 'bg-destructive' : state === 'ended' ? 'bg-muted-foreground' : 'bg-warn';
   return (
     <span className="flex items-center gap-2 text-sm text-muted-foreground">
       <span aria-hidden="true" className={`size-2 rounded-full ${tone}`} />
