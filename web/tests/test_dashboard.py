@@ -86,7 +86,7 @@ def test_every_stat_links_through_to_real_records(page) -> None:
         page.locator('[data-testid="stat-overdue"]').get_attribute("data-value")
     )
     page.locator('[data-testid="stat-overdue"]').click()
-    page.wait_for_url("**/commitments**", timeout=10_000)
+    page.wait_for_url("**/follow-ups?overdue=true", timeout=10_000)
     expect(page.locator('[data-testid="commitments-total"]')).to_be_visible(
         timeout=10_000
     )
@@ -114,9 +114,52 @@ def test_person_rows_link_to_their_history(page) -> None:
     if rows.count() == 0:
         print("  – no active people in this dataset; nothing to check")
         return
-    href = rows.first.get_attribute("href")
-    assert href and "/people/" in href and href.endswith("/commitments")
-    print(f"  ✓ person row links to {href}")
+    person = page.request.get(f"{BASE}/api/dashboard").json()["most_active_people"][0]
+    href = f"/people/{person['person_id']}"
+    expect(rows.first).to_have_attribute("href", href)
+    rows.first.click()
+    expect(page.get_by_role("heading", name=person["name"], exact=True)).to_be_visible()
+    expect(page.get_by_test_id("person-meetings")).to_have_text(str(person["meetings"]))
+    expect(page.get_by_test_id("person-decisions")).to_have_text(str(person["decisions"]))
+
+    history = page.request.get(f"{BASE}/api{person['link']['path']}").json()
+    expect(page.get_by_test_id("commitments-total")).to_have_attribute(
+        "data-value", str(history["total"])
+    )
+    expect(page.get_by_test_id("person-overdue")).to_have_text(str(history["overdue"]))
+    page.goto(f"{BASE}{person['link']['path']}")
+    expect(page.get_by_test_id("commitments-total")).to_be_visible()
+
+
+def test_follow_up_views(page) -> None:
+    page.goto(f"{BASE}/commitments")
+    page.wait_for_url("**/follow-ups")
+    expect(page.get_by_role("heading", name="Follow-ups", exact=True)).to_be_visible()
+    expect(page.get_by_test_id("commitments-total")).to_be_visible()
+    overdue = page.locator('[data-testid="commitment-row"]').evaluate_all(
+        "rows => rows.map(row => row.dataset.overdue)"
+    )
+    assert overdue == sorted(overdue, reverse=True)
+
+    page.get_by_role("button", name="Actions", exact=True).click()
+    expect(page.get_by_test_id("commitments-total")).to_be_visible()
+    assert "kind=action_item" in page.url
+    assert page.locator(
+        '[data-testid="commitment-row"]:not([data-kind="action_item"])'
+    ).count() == 0
+
+    page.get_by_role("tab", name="Overdue").click()
+    expect(page.get_by_test_id("followups-completion-rate")).to_have_text("—")
+    page.get_by_role("tab", name="By person").click()
+    expect(page.get_by_label("Person", exact=True)).to_be_visible()
+    page.get_by_role("tab", name="Mine").click()
+    expect(page.get_by_label("Your person record")).to_be_visible()
+    items = page.request.get(f"{BASE}/api/commitments?limit=500").json()["items"]
+    owner = next((item["owner_id"] for item in items if item["owner_id"]), None)
+    if owner:
+        page.get_by_label("Your person record").select_option(owner)
+        page.reload()
+        expect(page.get_by_label("Your person record")).to_have_value(owner)
 
 
 # -- Part 2 ----------------------------------------------------------------
@@ -234,6 +277,7 @@ def main() -> int:
                 test_every_stat_matches_a_direct_api_query,
                 test_every_stat_links_through_to_real_records,
                 test_person_rows_link_to_their_history,
+                test_follow_up_views,
                 test_low_confidence_item_shows_a_warning_not_a_normal_card,
                 test_verification_score_is_surfaced_on_cards,
                 test_dashboard_quality_indicator_matches_the_api,

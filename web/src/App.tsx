@@ -1,7 +1,7 @@
 import { ChevronsRight } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Navigate, Route, Routes } from 'react-router-dom';
+import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { AuthGate } from './components/AuthGate';
 import { CommandPalette } from './components/CommandPalette';
 import { Sidebar } from './components/Sidebar';
@@ -14,6 +14,7 @@ import { LiveViewer } from './routes/LiveViewer';
 import { MeetingDetail } from './routes/MeetingDetail';
 import { MeetingsList } from './routes/MeetingsList';
 import { OrgCopilot } from './routes/OrgCopilot';
+import { PersonRecord } from './routes/PersonRecord';
 import { PrivacySettings } from './routes/PrivacySettings';
 import { Register } from './routes/Register';
 import { LanguageSettings, SettingsLayout } from './routes/Settings';
@@ -29,6 +30,11 @@ export default function App() {
 }
 
 const SIDEBAR_KEY = 'meetingos:sidebar';
+
+function LegacyCommitments() {
+  const { search, hash } = useLocation();
+  return <Navigate to={{ pathname: '/follow-ups', search, hash }} replace />;
+}
 
 function readSidebarHidden(): boolean {
   try {
@@ -106,8 +112,10 @@ function Shell() {
           <Routes>
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
             <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/commitments" element={<Commitments />} />
-            <Route path="/people/:personId/commitments" element={<Commitments />} />
+            <Route path="/follow-ups" element={<Commitments />} />
+            <Route path="/commitments" element={<LegacyCommitments />} />
+            <Route path="/people/:personId" element={<PersonRecord />} />
+            <Route path="/people/:personId/commitments" element={<PersonRecord />} />
             <Route path="/decisions" element={<Register kind="decisions" />} />
             <Route path="/risks" element={<Register kind="risks" />} />
             <Route path="/quality" element={<Register kind="quality" />} />
