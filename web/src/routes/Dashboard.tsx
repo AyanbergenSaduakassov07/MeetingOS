@@ -134,7 +134,7 @@ export function Dashboard() {
               {data.most_active_people.map((person) => (
                 <li key={person.person_id}>
                   <Link
-                    to={person.link.path}
+                    to={`/people/${encodeURIComponent(person.person_id)}`}
                     data-testid="person-row"
                     className="flex min-h-14 items-center gap-4 rounded-lg border border-border bg-card px-4 py-2 transition-colors hover:border-muted-foreground/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   >

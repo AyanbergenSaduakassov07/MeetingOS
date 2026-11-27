@@ -45,7 +45,7 @@ export const NAV_GROUPS: Array<{ labelKey: string; items: NavItem[] }> = [
       { to: '/dashboard', icon: LayoutDashboard, labelKey: 'nav.dashboard' },
       { to: '/meetings', icon: ListChecks, labelKey: 'nav.meetings' },
       { to: '/decisions', icon: Gavel, labelKey: 'nav.decisions' },
-      { to: '/commitments', icon: ClipboardCheck, labelKey: 'nav.commitments' },
+      { to: '/follow-ups', icon: ClipboardCheck, labelKey: 'followups.title' },
       { to: '/risks', icon: ShieldAlert, labelKey: 'nav.risks' },
     ],
   },

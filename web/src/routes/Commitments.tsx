@@ -1,150 +1,233 @@
 import { useQuery } from '@tanstack/react-query';
-import { AlertTriangle, Loader2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
+import { useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link, useParams, useSearchParams } from 'react-router-dom';
-import { CitationTime } from '@/components/CitationTime';
-import { api } from '@/lib/api';
-import { cn } from '@/lib/utils';
+import { Link, useSearchParams } from 'react-router-dom';
+import { FollowUpList } from '@/components/FollowUpList';
+import { Button } from '@/components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { api, type CommitmentItem } from '@/lib/api';
+import { completionRate, formatCompletionRate } from '@/lib/followups';
 
-/**
- * The rows behind the dashboard's commitment counters.
- *
- * Filters come from the query string, which is what makes the dashboard link
- * reproduce its own number: `/commitments?overdue=true` returns exactly the
- * rows that stat counted. If the two ever disagree, the bug is visible.
- * Under `/people/:personId/commitments` it shows that person's obligations.
- */
-export function Commitments() {
-  const { t, i18n } = useTranslation();
-  const [params] = useSearchParams();
-  const { personId } = useParams();
+const KINDS = ['all', 'commitment', 'action_item'] as const;
+const VIEWS = ['all', 'overdue', 'mine', 'person'] as const;
+const MINE_KEY = 'meetingos:followups:mine';
+const LIST_LIMIT = '500';
 
-  const filters: Record<string, string> = {};
-  for (const key of ['overdue', 'owner', 'status', 'kind'] as const) {
-    const value = params.get(key);
-    if (value) filters[key] = value;
+function getView(params: URLSearchParams) {
+  if (params.get('overdue') === 'true') return 'overdue';
+  if (params.get('view') === 'mine') return 'mine';
+  if (params.get('view') === 'person' || params.has('owner')) return 'person';
+  return 'all';
+}
+
+function readMine() {
+  try {
+    return localStorage.getItem(MINE_KEY) ?? '';
+  } catch {
+    return '';
   }
+}
 
-  const commitments = useQuery({
-    queryKey: ['commitments', personId ?? null, filters],
-    queryFn: async () => {
-      if (!personId) return { ...(await api.listCommitments(filters)), personName: null };
-      const person = await api.getPersonCommitments(personId);
-      return {
-        items: person.items,
-        total: person.total,
-        overdue_count: person.overdue,
-        personName: person.person_name ?? person.person_email ?? personId,
-      };
+function useMine() {
+  const [mine, setMine] = useState(readMine);
+  return [
+    mine,
+    (id: string) => {
+      setMine(id);
+      try {
+        localStorage.setItem(MINE_KEY, id);
+      } catch {
+        // The selection stays usable for this visit.
+      }
     },
-  });
+  ] as const;
+}
 
-  const overdueOnly = filters.overdue === 'true';
-  const title = personId
-    ? t('commitments.personTitle', { name: commitments.data?.personName ?? '…' })
-    : overdueOnly
-      ? t('commitments.overdueTitle')
-      : t('commitments.title');
+function PersonPicker({
+  owner,
+  mine,
+  onChange,
+}: {
+  owner: string;
+  mine: boolean;
+  onChange: (id: string) => void;
+}) {
+  const { t, i18n } = useTranslation();
+  const pickerId = useId();
+  const filters = { limit: LIST_LIMIT };
+  const directory = useQuery({
+    queryKey: ['commitments', filters],
+    queryFn: () => api.listCommitments(filters),
+  });
+  const people = new Map<string, string>();
+  for (const item of directory.data?.items ?? []) {
+    if (item.owner_id) people.set(item.owner_id, item.owner_name || item.owner_id);
+  }
+  if (owner && !people.has(owner)) people.set(owner, owner);
+  const options = [...people].sort((a, b) => a[1].localeCompare(b[1], i18n.language));
 
   return (
-    <div className="mx-auto max-w-4xl px-6 py-8">
-      <header className="flex flex-wrap items-baseline justify-between gap-3">
-        <h1 className="font-display text-3xl font-semibold tracking-tight">{title}</h1>
-        <Link
-          to="/dashboard"
-          className="text-sm text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
-        >
+    <div className="mb-5 w-full max-w-xs">
+      <label htmlFor={pickerId} className="text-sm font-medium">
+        {mine ? t('followups.yourPerson') : t('followups.person')}
+      </label>
+      <select
+        id={pickerId}
+        className="mt-1 block h-10 w-full rounded-md border border-input bg-card px-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        value={owner}
+        onChange={(event) => onChange(event.target.value)}
+      >
+        <option value="">{t('followups.choosePerson')}</option>
+        {options.map(([id, name]) => (
+          <option key={id} value={id}>
+            {name}
+          </option>
+        ))}
+      </select>
+      {directory.isError && (
+        <p role="alert" className="mt-1 text-sm text-destructive">
+          {t('followups.peopleFailed')}
+        </p>
+      )}
+    </div>
+  );
+}
+
+function RegisterResults({ items, total }: { items: CommitmentItem[]; total: number }) {
+  const { t, i18n } = useTranslation();
+  return (
+    <>
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-sm text-muted-foreground">
+        <p data-testid="commitments-total" data-value={total}>
+          {t('commitments.count', { count: total })}
+        </p>
+        <dl className="flex items-baseline gap-2">
+          <dt>{t('followups.completionRate')}</dt>
+          <dd
+            className="font-mono font-medium tabular-nums text-foreground"
+            data-testid="followups-completion-rate"
+          >
+            {formatCompletionRate(completionRate(items), i18n.language)}
+          </dd>
+        </dl>
+      </div>
+      <FollowUpList items={items} />
+    </>
+  );
+}
+
+function useFollowUps() {
+  const [params, setParams] = useSearchParams();
+  const [mine, setMine] = useMine();
+  const view = getView(params);
+  const kind = params.get('kind') ?? 'all';
+  const personView = view === 'person' || view === 'mine';
+  const owner = view === 'mine' ? mine : (params.get('owner') ?? '');
+  const filters = Object.fromEntries(
+    ['overdue', 'status', 'kind'].flatMap((key) => {
+      const value = params.get(key);
+      return value ? [[key, value]] : [];
+    }),
+  );
+  filters.limit = LIST_LIMIT;
+  if (owner) filters.owner = owner;
+
+  const results = useQuery({
+    queryKey: ['commitments', filters],
+    queryFn: () => api.listCommitments(filters),
+    enabled: !personView || Boolean(owner),
+  });
+
+  function setFilter(key: string, value: string) {
+    const next = new URLSearchParams(params);
+    if (value) next.set(key, value);
+    else next.delete(key);
+    setParams(next);
+  }
+
+  function setView(nextView: string) {
+    const next = new URLSearchParams(params);
+    for (const key of ['view', 'overdue', 'owner']) next.delete(key);
+    if (nextView === 'overdue') next.set('overdue', 'true');
+    if (nextView === 'mine' || nextView === 'person') next.set('view', nextView);
+    setParams(next);
+  }
+
+  return { view, kind, personView, owner, results, setFilter, setView, setMine };
+}
+
+export function Commitments() {
+  const { t } = useTranslation();
+  const { view, kind, personView, owner, results, setFilter, setView, setMine } = useFollowUps();
+
+  return (
+    <div className="mx-auto max-w-4xl px-4 pb-8 pt-14 md:px-6 md:pt-8">
+      <header className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2">
+        <h1 className="font-display text-3xl font-semibold tracking-tight">
+          {t('followups.title')}
+        </h1>
+        <Link to="/dashboard" className="text-sm text-link underline-offset-2 hover:underline">
           {t('commitments.backToDashboard')}
         </Link>
       </header>
 
-      {commitments.isLoading && (
-        <p className="mt-8 flex items-center gap-2 text-sm text-muted-foreground">
-          <Loader2 aria-hidden="true" className="size-4 animate-spin" />
-          {t('common.loading')}
-        </p>
-      )}
-
-      {commitments.isError && (
-        <p role="alert" className="mt-8 text-sm text-destructive">
-          {t('commitments.loadFailed')}
-        </p>
-      )}
-
-      {commitments.data && (
-        <>
-          <p
-            className="mt-2 text-sm text-muted-foreground"
-            data-testid="commitments-total"
-            data-value={commitments.data.total}
+      <fieldset className="mt-5 flex min-w-0 flex-wrap gap-1">
+        <legend className="sr-only">{t('followups.kind')}</legend>
+        {KINDS.map((value) => (
+          <Button
+            key={value}
+            type="button"
+            variant="ghost"
+            size="sm"
+            aria-pressed={kind === value}
+            className="rounded-md border border-transparent text-muted-foreground aria-pressed:border-border aria-pressed:bg-accent aria-pressed:text-accent-foreground"
+            onClick={() => setFilter('kind', value === 'all' ? '' : value)}
           >
-            {t('commitments.count', { count: commitments.data.total })}
-          </p>
+            {t(`followups.kinds.${value}`)}
+          </Button>
+        ))}
+      </fieldset>
 
-          {commitments.data.items.length === 0 ? (
-            <p className="mt-8 rounded-lg border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
-              {t('commitments.empty')}
-            </p>
-          ) : (
-            <ul className="mt-4 space-y-2" data-testid="commitment-list">
-              {commitments.data.items.map((item) => (
-                <li
-                  key={item.id}
-                  data-testid="commitment-row"
-                  data-overdue={item.overdue}
-                  className="rounded-lg border border-border bg-card p-4"
-                >
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="rounded-full bg-secondary px-2.5 py-0.5 text-xs font-medium text-secondary-foreground">
-                      {t(`commitments.kind_${item.kind}`, item.kind)}
-                    </span>
-                    {item.overdue && (
-                      <span
-                        className="inline-flex items-center gap-1.5 rounded-full bg-destructive/10 px-2.5 py-0.5 text-xs font-semibold text-destructive"
-                        data-testid="overdue-badge"
-                      >
-                        <AlertTriangle aria-hidden="true" className="size-3.5" />
-                        {t('commitments.overdueBy', { days: item.days_overdue ?? 0 })}
-                      </span>
-                    )}
-                    {item.start_ms !== null && item.meeting_id && (
-                      <CitationTime ms={item.start_ms} className="ml-auto" />
-                    )}
-                  </div>
-
-                  {/* Commitment text is meeting content — never translated. */}
-                  <p className="mt-2 text-sm font-medium">{item.text}</p>
-
-                  <dl className="mt-1 flex flex-wrap gap-x-4 text-xs text-muted-foreground">
-                    <div className="flex gap-1">
-                      <dt>{t('intelligence.assignee')}:</dt>
-                      <dd className={cn(!item.owner_name && 'italic')}>
-                        {item.owner_name ?? t('intelligence.unassigned')}
-                      </dd>
-                    </div>
-                    {item.due_date && (
-                      <div className="flex gap-1">
-                        <dt>{t('intelligence.due')}:</dt>
-                        <dd className="font-mono tabular-nums">
-                          {new Date(item.due_date).toLocaleDateString(i18n.language)}
-                        </dd>
-                      </div>
-                    )}
-                    {item.meeting_title && item.meeting_id && (
-                      <Link
-                        to={`/meetings/${item.meeting_id}`}
-                        className="underline-offset-2 hover:text-foreground hover:underline"
-                      >
-                        {item.meeting_title}
-                      </Link>
-                    )}
-                  </dl>
-                </li>
-              ))}
-            </ul>
+      <Tabs value={view} onValueChange={setView} className="mt-4">
+        <TabsList
+          aria-label={t('followups.views')}
+          className="h-auto w-full flex-wrap justify-start gap-1 rounded-none border-b border-border bg-transparent px-0 pb-2"
+        >
+          {VIEWS.map((value) => (
+            <TabsTrigger
+              key={value}
+              value={value}
+              className="rounded-md px-2.5 data-[state=active]:bg-accent data-[state=active]:text-accent-foreground data-[state=active]:shadow-none"
+            >
+              {t(`followups.tabs.${value}`)}
+            </TabsTrigger>
+          ))}
+        </TabsList>
+        <TabsContent value={view} className="mt-4">
+          {personView && (
+            <PersonPicker
+              owner={owner}
+              mine={view === 'mine'}
+              onChange={view === 'mine' ? setMine : (id) => setFilter('owner', id)}
+            />
           )}
-        </>
-      )}
+          {results.isLoading && (
+            <output className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Loader2 aria-hidden="true" className="size-4 animate-spin" />
+              {t('common.loading')}
+            </output>
+          )}
+          {results.isError && (
+            <p role="alert" className="text-sm text-destructive">
+              {t('followups.loadFailed')}
+            </p>
+          )}
+          {results.data && (!personView || owner) && (
+            <RegisterResults items={results.data.items} total={results.data.total} />
+          )}
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

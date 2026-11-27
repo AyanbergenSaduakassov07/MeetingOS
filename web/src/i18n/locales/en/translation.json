@@ -226,6 +226,40 @@
     "kind_action_item": "Task",
     "personTitle": "Commitments: {{name}}"
   },
+  "followups": {
+    "title": "Follow-ups",
+    "kind": "Follow-up type",
+    "kinds": {
+      "all": "All types",
+      "commitment": "Commitments",
+      "action_item": "Actions"
+    },
+    "views": "Saved views",
+    "tabs": {
+      "all": "All",
+      "overdue": "Overdue",
+      "mine": "Mine",
+      "person": "By person"
+    },
+    "person": "Person",
+    "yourPerson": "Your person record",
+    "choosePerson": "Choose a person",
+    "peopleFailed": "Could not load the list of people.",
+    "completionRate": "Completion rate",
+    "loadFailed": "Could not load follow-ups."
+  },
+  "person": {
+    "title": "Person record",
+    "activity": "Activity",
+    "activityPeriod": "Activity in the last {{count}} days",
+    "activityUnavailable": "Attendance and decision counts are unavailable for this person.",
+    "meetings": "Meetings attended",
+    "decisions": "Decisions made",
+    "followups": "Commitments and actions",
+    "overdue": "Overdue items",
+    "otherFollowups": "Other commitments and actions",
+    "loadFailed": "Could not load this person’s record."
+  },
   "privacy": {
     "title": "Privacy & data governance",
     "subtitle": "What this install actually does with your meeting data.",
