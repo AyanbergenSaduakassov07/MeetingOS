@@ -391,6 +391,35 @@ async function askStream(
   throw new ApiError(502, 'The answer stream ended before the answer was complete.');
 }
 
+export interface DecisionTimelineEntry {
+  decision_id: string;
+  meeting_id: string | null;
+  meeting_title: string | null;
+  occurred_at: string | null;
+  title: string;
+  status: string;
+  event_type: string;
+  start_ms: number | null;
+  is_current: boolean;
+}
+
+export interface DecisionConflict {
+  relationship: string;
+  reasoning: string;
+  confidence: number;
+  is_conflict: boolean;
+  prior_decision_id: string;
+  prior_meeting_id: string | null;
+  prior_meeting_title: string | null;
+  prior_claim: string;
+  prior_start_ms: number | null;
+  new_meeting_id: string | null;
+  new_meeting_title: string | null;
+  new_claim: string;
+  new_start_ms: number | null;
+  low_confidence: boolean;
+}
+
 const get = <T>(path: string) => request<T>(path);
 const sendJson = <T>(method: string, path: string, body: unknown) =>
   request<T>(path, {
@@ -444,6 +473,10 @@ export const api = {
     get<CommitmentList>(`/api/commitments?${new URLSearchParams(params)}`),
   getPersonCommitments: (personId: string) =>
     get<PersonCommitments>(`/api/people/${encodeURIComponent(personId)}/commitments`),
+  getDecisionTimeline: (id: string) =>
+    get<{ entries: DecisionTimelineEntry[] }>(`/api/decisions/${encodeURIComponent(id)}/timeline`),
+  getDecisionConflicts: (id: string) =>
+    get<{ conflicts: DecisionConflict[] }>(`/api/decisions/${encodeURIComponent(id)}/conflicts`),
   // Deterministic minutes; `summarise` adds an LLM paragraph written only from them.
   getMinutes: (id: string, summarise: boolean, language: string) =>
     request<Minutes>(
