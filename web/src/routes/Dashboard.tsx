@@ -2,6 +2,12 @@ import { useQuery } from '@tanstack/react-query';
 import { AlertCircle, Loader2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
+import {
+  EmptyWorkspace,
+  NeedsAttention,
+  RecentMeetings,
+  UpcomingBrief,
+} from '@/components/HomeBriefing';
 import { QualityIndicator } from '@/components/QualityIndicator';
 import { StatCard } from '@/components/StatCard';
 import { api } from '@/lib/api';
@@ -15,13 +21,14 @@ const SEVERITY_TONE: Record<string, string> = {
 };
 
 export function Dashboard() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const dashboard = useQuery({
     queryKey: ['dashboard'],
     queryFn: () => api.getDashboard(),
   });
+  const meetings = useQuery({ queryKey: ['meetings'], queryFn: api.listMeetings });
 
-  if (dashboard.isLoading) {
+  if (dashboard.isLoading || meetings.isLoading) {
     return (
       <output className="mx-auto mt-16 flex max-w-md flex-col items-center gap-3 rounded-lg border border-border bg-card p-8 text-center">
         <Loader2 aria-hidden="true" className="size-6 animate-spin text-muted-foreground" />
@@ -50,19 +57,37 @@ export function Dashboard() {
   return (
     <div className="mx-auto max-w-6xl px-6 py-8" data-testid="dashboard">
       <header>
-        <h1 className="font-display text-3xl font-semibold tracking-tight">
-          {t('dashboard.title')}
-        </h1>
+        <h1 className="font-display text-3xl font-semibold tracking-tight">{t('home.title')}</h1>
         <p className="mt-1 text-sm text-muted-foreground">
           {t('dashboard.period', { days: data.period_days, meetings: data.meetings_in_period })}
+          {' · '}
+          {t('home.updated', {
+            time: new Date(dashboard.dataUpdatedAt).toLocaleTimeString(i18n.language, {
+              hour: '2-digit',
+              minute: '2-digit',
+            }),
+          })}
         </p>
       </header>
 
-      <section className="mt-6" aria-labelledby="decisions-heading">
-        <h2 id="decisions-heading" className="sr-only">
-          {t('dashboard.decisionsHeading')}
+      {(meetings.data ?? []).length === 0 && <EmptyWorkspace />}
+
+      <div className="mt-6 grid gap-6 lg:grid-cols-[2fr_1fr]">
+        <div className="min-w-0 space-y-6">
+          <NeedsAttention periodDays={data.period_days} />
+          {(meetings.data ?? []).length > 0 && <RecentMeetings meetings={meetings.data ?? []} />}
+        </div>
+        <div className="min-w-0 space-y-6">
+          <QualityIndicator quality={data.extraction_quality} />
+          <UpcomingBrief />
+        </div>
+      </div>
+
+      <section className="mt-8" aria-labelledby="decisions-heading">
+        <h2 id="decisions-heading" className="mb-2 font-display text-sm font-bold">
+          {t('home.register')}
         </h2>
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
           <StatCard
             stat={data.decisions_approved}
             label={t('dashboard.statApproved')}
@@ -87,7 +112,7 @@ export function Dashboard() {
         </div>
       </section>
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-[2fr_1fr]">
+      <div className="mt-6 grid gap-6 lg:grid-cols-2">
         <section aria-labelledby="risks-heading">
           <h2 id="risks-heading" className="font-display text-sm font-bold">
             {t('dashboard.topRisks')}
@@ -125,8 +150,12 @@ export function Dashboard() {
               ))}
             </ul>
           )}
+        </section>
 
-          <h2 className="mt-6 font-display text-sm font-bold">{t('dashboard.mostActive')}</h2>
+        <section aria-labelledby="people-heading">
+          <h2 id="people-heading" className="font-display text-sm font-bold">
+            {t('dashboard.mostActive')}
+          </h2>
           {data.most_active_people.length === 0 ? (
             <p className="mt-2 text-sm text-muted-foreground">{t('dashboard.noActivity')}</p>
           ) : (
@@ -161,8 +190,6 @@ export function Dashboard() {
             </ul>
           )}
         </section>
-
-        <QualityIndicator quality={data.extraction_quality} />
       </div>
     </div>
   );
