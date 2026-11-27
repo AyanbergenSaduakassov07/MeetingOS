@@ -124,7 +124,7 @@ export function CopilotPanel({ meetingId }: { meetingId: string }) {
 
       <div
         ref={threadRef}
-        className="min-h-0 flex-1 overflow-y-auto px-4 py-5"
+        className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-5 wrap-anywhere"
         data-testid="copilot-thread"
         aria-live="polite"
         aria-busy={ask.isPending}
@@ -192,7 +192,7 @@ export function CopilotPanel({ meetingId }: { meetingId: string }) {
               }
             }}
             placeholder={t('copilot.placeholder')}
-            className="max-h-40 min-h-6 flex-1 resize-none bg-transparent py-1 text-sm outline-none placeholder:text-muted-foreground disabled:opacity-60"
+            className="max-h-40 min-h-6 min-w-0 flex-1 resize-none bg-transparent py-1 text-sm outline-none placeholder:text-muted-foreground disabled:opacity-60"
           />
           {ask.isPending ? (
             <button
@@ -225,7 +225,7 @@ export function CopilotPanel({ meetingId }: { meetingId: string }) {
 function EmptyState({ onPick }: { onPick: (question: string) => void }) {
   const { t } = useTranslation();
   return (
-    <div className="flex h-full flex-col justify-center gap-4">
+    <div className="flex min-h-full flex-col justify-center gap-4">
       <div className="space-y-2 text-center">
         <span className="mx-auto flex size-10 items-center justify-center rounded-full bg-link-tint">
           <Sparkles aria-hidden="true" className="size-5 text-link" />

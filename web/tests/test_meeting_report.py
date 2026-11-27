@@ -151,9 +151,9 @@ def test_completed_report_and_citation_seek(page) -> None:
     expect(page.locator('[data-testid="meeting-title"]')).not_to_be_empty()
     print("  ✓ completed report renders")
 
-    # Decisions tab: cards carry a chip, a confidence badge and a citation.
+    # The outline jumps to decisions, whose cards carry confidence and citations.
     page.locator('[data-testid="tab-decisions"]').click()
-    cards = page.locator('[data-testid="item-card"]')
+    cards = page.locator('#decisions [data-testid="item-card"]')
     expect(cards.first).to_be_visible()
     assert cards.count() >= 1, "expected at least one decision card"
     expect(cards.first.locator('[data-testid="confidence-badge"]')).to_be_visible()
@@ -185,6 +185,45 @@ def test_completed_report_and_citation_seek(page) -> None:
         page.locator('[data-testid="player-bar"]').get_attribute("data-position-ms")
     )
     print(f"  ✓ citation click seeked audio to {position}ms (asked for {target_ms}ms)")
+    expect(page.locator('#decisions [data-selected="true"]')).to_have_count(1)
+    expect(
+        page.locator('[data-testid="transcript-list"] [aria-current="true"]')
+    ).to_have_count(1)
+
+    # Repeating the same citation should bring its row back after manual scrolling.
+    viewport = page.viewport_size
+    page.set_viewport_size({"width": 1440, "height": 500})
+    transcript = page.get_by_test_id("transcript-list")
+    try:
+        transcript.evaluate("(list) => { list.scrollTop = list.scrollHeight; }")
+        citation.click()
+        expect(transcript.locator('[aria-current="true"]')).to_be_in_viewport()
+    finally:
+        page.set_viewport_size(viewport)
+
+
+def test_record_pane_remembers_visibility(page) -> None:
+    meeting_id = completed_meeting_id(page)
+    page.goto(f"{BASE}/meetings/{meeting_id}")
+
+    pane = page.get_by_test_id("record-pane")
+    expect(pane).to_be_visible()
+    assert pane.bounding_box()["width"] == 280
+
+    page.get_by_test_id("open-ask").click()
+    input_box = page.get_by_test_id("copilot-input")
+    input_box.press("t")
+    expect(input_box).to_have_value("t")
+    page.get_by_test_id("hide-record-pane").click()
+    expect(pane).to_be_hidden()
+    page.reload()
+    expect(page.get_by_test_id("meeting-detail")).to_be_visible()
+    expect(pane).to_be_hidden()
+
+    page.keyboard.press("t")
+    expect(pane).to_be_visible()
+    expect(page.get_by_test_id("transcript-list")).to_be_visible()
+    print("  ✓ pane visibility persists, and T respects text input")
 
 
 def test_language_toggle_switches_chrome_only(page) -> None:
@@ -193,9 +232,9 @@ def test_language_toggle_switches_chrome_only(page) -> None:
     page.wait_for_load_state("networkidle")
     page.locator('[data-testid="tab-decisions"]').click()
 
-    tab = page.locator('[data-testid="tab-decisions"]')
-    title = page.locator('[data-testid="item-title"]').first
-    quote = page.locator('[data-testid="item-quote"]').first
+    tab = page.locator('[data-testid="tab-decisions"] span').first
+    title = page.locator('#decisions [data-testid="item-title"]').first
+    quote = page.locator('#decisions [data-testid="item-quote"]').first
 
     en_tab = tab.inner_text().strip()
     en_title = title.inner_text().strip()
@@ -203,7 +242,9 @@ def test_language_toggle_switches_chrome_only(page) -> None:
 
     switch_language(page, "Русский")
     page.wait_for_function(
-        "(before) => document.querySelector('[data-testid=\"tab-decisions\"]').innerText.trim() !== before",
+        """(before) => document.querySelector(
+            '[data-testid="tab-decisions"] span'
+        ).innerText.trim() !== before""",
         arg=en_tab,
         timeout=5_000,
     )
@@ -225,7 +266,7 @@ def test_language_toggle_switches_chrome_only(page) -> None:
     # And the choice survives a reload, via localStorage.
     page.reload()
     page.wait_for_load_state("networkidle")
-    expect(page.locator('[data-testid="tab-decisions"]')).to_have_text("Решения")
+    expect(tab).to_have_text("Решения")
     print("  ✓ language persisted across reload")
 
     switch_language(page, "English")
@@ -266,6 +307,7 @@ def main() -> int:
                 test_upload_returns_processing,
                 test_processing_state_card,
                 test_completed_report_and_citation_seek,
+                test_record_pane_remembers_visibility,
                 test_language_toggle_switches_chrome_only,
             ):
                 print(f"\n{test.__name__}")

@@ -48,6 +48,7 @@ def stub_ask(page, payload: dict) -> None:
 
 
 def ask(page, question: str) -> None:
+    page.get_by_test_id("open-ask").click()
     page.locator('[data-testid="copilot-input"]').fill(question)
     page.locator('[data-testid="copilot-send"]').click()
 

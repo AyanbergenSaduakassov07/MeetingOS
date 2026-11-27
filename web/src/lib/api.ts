@@ -35,6 +35,7 @@ export interface MeetingSummary {
 export interface MeetingDetail extends MeetingSummary {
   description: string | null;
   summary: string | null;
+  template_id: string | null;
   sentiment_score: number | null;
   processing_error: string | null;
   consent_confirmed_at: string | null;
@@ -403,8 +404,19 @@ export interface Session {
   authenticated: boolean;
 }
 
+export interface MinuteLine {
+  text: string;
+  detail: string | null;
+  evidence_id: string | null;
+  start_ms: number | null;
+  verification_status: VerificationStatus | null;
+}
+
 export interface Minutes {
   meeting_id: string;
+  is_board_meeting: boolean;
+  sections: Array<{ heading: string; lines: MinuteLine[] }>;
+  uncited: MinuteLine[];
   line_count: number;
   cited_line_count: number;
   markdown: string;
@@ -418,6 +430,9 @@ export const api = {
 
   listMeetings: () => get<MeetingSummary[]>('/api/meetings'),
   getMeeting: (id: string) => get<MeetingDetail>(`/api/meetings/${id}`),
+  renameMeeting: (id: string, title: string) =>
+    sendJson<MeetingDetail>('PATCH', `/api/meetings/${id}`, { title }),
+  deleteMeeting: (id: string) => request<void>(`/api/meetings/${id}`, { method: 'DELETE' }),
   getIntelligence: (id: string) => get<MeetingIntelligence>(`/api/meetings/${id}/intelligence`),
   getTranscript: (id: string) => get<TranscriptSegment[]>(`/api/meetings/${id}/transcript`),
   audioUrl: (id: string) => `${BASE}/api/meetings/${id}/audio`,
@@ -444,6 +459,8 @@ export const api = {
       answer_language: answerLanguage,
     }),
   listDocuments: () => get<LibraryDocument[]>('/api/documents'),
+  linkDocument: (documentId: string, meetingId: string) =>
+    sendJson('POST', `/api/documents/${documentId}/link`, { meeting_id: meetingId }),
   uploadDocument(file: File, title: string, isSensitive: boolean): Promise<LibraryDocument> {
     const form = new FormData();
     form.append('file', file);

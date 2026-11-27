@@ -42,7 +42,17 @@ const VERIFICATION_STYLES: Record<string, { badge: string; icon: typeof CheckCir
   unverified: { badge: 'bg-muted text-muted-foreground', icon: CircleHelp },
 };
 
-export function ItemCard({ item, kind }: { item: ExtractedItem; kind: ItemKind }) {
+export function ItemCard({
+  item,
+  kind,
+  isSelected,
+  onSelect,
+}: {
+  item: ExtractedItem;
+  kind: ItemKind;
+  isSelected?: boolean;
+  onSelect?: () => void;
+}) {
   const { t } = useTranslation();
   const kindStyle = KIND_STYLES[kind];
   const KindIcon = kindStyle.icon;
@@ -68,6 +78,7 @@ export function ItemCard({ item, kind }: { item: ExtractedItem; kind: ItemKind }
     <article
       data-testid="item-card"
       data-kind={kind}
+      data-selected={isSelected}
       data-verification={item.verification_status}
       className={cn(
         'rounded-lg border bg-card p-4 transition-colors duration-150',
@@ -78,6 +89,7 @@ export function ItemCard({ item, kind }: { item: ExtractedItem; kind: ItemKind }
           : item.verification_status === 'low_confidence'
             ? 'border-warn/40 hover:border-warn/60'
             : 'border-border hover:border-muted-foreground/30',
+        isSelected && 'bg-accent',
       )}
     >
       <div className="flex flex-wrap items-center gap-2">
@@ -141,7 +153,7 @@ export function ItemCard({ item, kind }: { item: ExtractedItem; kind: ItemKind }
         )}
 
         {item.source_start_ms !== null && (
-          <CitationTime ms={item.source_start_ms} className="ml-auto" />
+          <CitationTime ms={item.source_start_ms} className="ml-auto" onSeek={onSelect} />
         )}
       </div>
 
@@ -166,7 +178,18 @@ export function ItemCard({ item, kind }: { item: ExtractedItem; kind: ItemKind }
 
       {/* Meeting content: never translated, so it carries no t() call. */}
       <h3 className="mt-3 font-display text-base font-bold leading-snug" data-testid="item-title">
-        {item.title}
+        {onSelect ? (
+          <button
+            type="button"
+            aria-pressed={isSelected}
+            onClick={onSelect}
+            className="rounded-sm text-left hover:text-link focus-visible:outline-2 focus-visible:outline-ring"
+          >
+            {item.title}
+          </button>
+        ) : (
+          item.title
+        )}
       </h3>
       {item.description && (
         <p className="mt-1 whitespace-pre-line text-sm text-muted-foreground">{item.description}</p>

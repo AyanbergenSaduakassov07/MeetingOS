@@ -120,7 +120,10 @@ function Shell() {
             <Route path="/library" element={<Library />} />
             <Route path="/live" element={<LiveHost />} />
             <Route path="/meetings" element={<MeetingsList />} />
-            <Route path="/meetings/:meetingId" element={<MeetingDetail />} />
+            <Route
+              path="/meetings/:meetingId"
+              element={<MeetingDetail showOutline={!sidebarHidden} />}
+            />
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Routes>
         </main>

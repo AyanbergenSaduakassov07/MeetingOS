@@ -181,7 +181,7 @@ def test_verification_score_is_surfaced_on_cards(page) -> None:
     page.wait_for_load_state("networkidle")
     page.locator('[data-testid="tab-decisions"]').click()
 
-    scores = page.locator('[data-testid="verification-score"]')
+    scores = page.locator('#decisions [data-testid="verification-score"]')
     expect(scores.first).to_be_visible(timeout=10_000)
 
     api = page.request.get(f"{BASE}/api/meetings/{meeting_id}/intelligence").json()

@@ -119,10 +119,45 @@
     "processingDetail": "Transcription and extraction are running. This page updates on its own.",
     "failedTitle": "Processing failed",
     "failedDetail": "This recording could not be processed.",
-    "extractionIncomplete": "Extraction did not finish",
+    "extractionIncomplete": "Some items may be missing",
     "analyzingTitle": "Extracting decisions and action items…",
     "analyzingDetail": "The transcript is ready. Decisions, actions and risks appear here when the language model finishes.",
-    "extractionIncompleteHint": "Some items may be missing. The transcript is complete."
+    "extractionIncompleteHint": "The transcript is complete."
+  },
+  "record": {
+    "sections": "Meeting sections",
+    "pane": "Transcript and Ask",
+    "ask": "Ask",
+    "hidePane": "Hide pane",
+    "resizePane": "Resize pane",
+    "transcriptEmpty": "No transcript segments.",
+    "pipeline": "Processing steps",
+    "step": {
+      "queued": "Queued",
+      "processing": "Transcription",
+      "analyzing": "Extraction"
+    },
+    "transcriptionFix": "Transcription failed. Check the recording and upload it again.",
+    "minutes": "Minutes",
+    "minutesFailed": "Could not load the minutes.",
+    "summaryLanguage": "Summary language",
+    "uncited": "Unverified items",
+    "copyFailed": "Could not copy the minutes.",
+    "more": "More meeting actions",
+    "rename": "Rename",
+    "linkDocument": "Link document",
+    "document": "Document",
+    "chooseDocument": "Choose a library document",
+    "documentLinked": "Document linked",
+    "documentsFailed": "Could not load library documents.",
+    "noDocuments": "No documents in the library.",
+    "meetingTitle": "Meeting title",
+    "confirmTitle": "Type the meeting title",
+    "deleteDetail": "Permanently delete “{{title}}” and its transcript?",
+    "actionUnavailable": "This action is unavailable on this server.",
+    "actionFailed": "Could not complete this action. Try again.",
+    "resolutions": "Resolutions",
+    "deferred": "Deferred"
   },
   "intelligence": {
     "decisions": "Decisions",
@@ -252,14 +287,14 @@
   },
   "summary": {
     "title": "Summary",
-    "hint": "A short summary written only from the cited items below, in your interface language.",
+    "hint": "Generate a summary from the cited items below. You can change its language in Minutes.",
     "generate": "Generate summary",
     "generating": "Writing summary… this can take a minute",
     "nothing": "Nothing to summarise: no items were extracted.",
     "failed": "The summary could not be generated. Try again.",
     "copy": "Copy minutes",
     "copied": "Copied",
-    "download": "Download .md"
+    "download": "Export Markdown"
   },
   "library": {
     "title": "Library",

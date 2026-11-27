@@ -14,10 +14,12 @@ export function CitationTime({
   ms,
   className,
   label,
+  onSeek,
 }: {
   ms: number;
   className?: string;
   label?: string;
+  onSeek?: () => void;
 }) {
   const { t } = useTranslation();
   const seek = usePlayback((state) => state.seek);
@@ -30,7 +32,8 @@ export function CitationTime({
       data-ms={ms}
       aria-label={label ?? t('player.seekTo', { time: text })}
       onClick={() => {
-        seek(ms);
+        if (onSeek) onSeek();
+        else seek(ms);
         document
           .getElementById('player-bar')
           ?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
