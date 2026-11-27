@@ -102,7 +102,7 @@ export function NeedsAttention({ periodDays }: { periodDays: number }) {
                       {row.detail && ' · '}
                       <Link
                         to={`/meetings/${row.meetingId}`}
-                        className="text-link underline-offset-2 hover:underline"
+                        className="text-link underline underline-offset-2"
                       >
                         {row.meetingTitle}
                       </Link>

@@ -52,7 +52,7 @@ function FollowUpRow({ item }: { item: CommitmentItem }) {
         {item.meeting_title && item.meeting_id && (
           <Link
             to={`/meetings/${encodeURIComponent(item.meeting_id)}`}
-            className="break-words text-link underline-offset-2 hover:underline"
+            className="inline-flex min-h-6 items-center break-words text-link underline-offset-2 hover:underline"
           >
             {item.meeting_title}
           </Link>
